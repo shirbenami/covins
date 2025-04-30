@@ -116,11 +116,11 @@ rosbag play MH_01_easy.bag --clock
 
 ---
 
-6. RViz Visualization (Optional)
+## 6. RViz Visualization (Optional)
 
 To visualize the COVINS backend output (e.g., trajectories, keyframes, landmarks) on your local machine, follow the steps below. This allows you to run RViz even if you are using Docker with sudo privileges.
 
-6.1 Allow X11 Access
+### 6.1 Allow X11 Access
 
 On your host machine (not inside Docker), allow the root user access to the X11 display:
 
@@ -129,7 +129,7 @@ xhost +SI:localuser:root
 ```
 This allows GUI applications like RViz running as root (in Docker) to display on your screen.
 
-6.2 Run the Docker Container with GUI Support
+### 6.2 Run the Docker Container with GUI Support
 
 Instead of using ./run.sh -t, run the Docker container manually with all required permissions for GUI:
 
@@ -149,7 +149,7 @@ Replace covins_terminal with the name of your actual Docker image.
 
 Make sure the value of DISPLAY matches your host system (use echo $DISPLAY to check).
 
-6.3 Run RViz Inside the Container
+### 6.3 Run RViz Inside the Container
 
 Once inside the Docker terminal, run:
 
@@ -157,6 +157,17 @@ Once inside the Docker terminal, run:
 rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins.rviz
 ```
 You should now see the RViz GUI displaying the COVINS backend data in real time.
+Ensure that the covins.rviz file has the correct frame set (e.g., odom instead of world). If you encounter an error such as Fixed Frame [world] does not exist, open RViz, set the Fixed Frame to odom, and then save the configuration using:
+
+File → Save Config As → covins_updated.rviz
+
+You can then load this updated configuration using:
+
+```bash
+rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins_updated.rviz
+```
+
+You should now see the RViz GUI displaying the COVINS backend data in real time, including keyframes, trajectories, and point clouds.
 
 ## Key Points to Remember
 
