@@ -37,23 +37,43 @@ make build NR_JOBS=8
 
 ---
 
-## 3. Running the System (in separate terminals)
+## 3. Set and Verify Server IP Address
+
+IMPORTANT: Make sure that the sys.server_ip in config_comm.yaml matches the IP address of the machine running the COVINS server (back-end).
+
+### 3.1 Check the local IP address
+
+In the machine running the server:
+```bash
+hostname -I
+```
+Copy the IP (e.g., 192.168.0.102) and update this line in:
+```bash
+nano ~/ws/covins_ws/src/covins/covins_comm/config/config_comm.yaml
+```
+Update the line:
+```bash
+sys.server_ip: 'YOUR_SERVER_IP_HERE'
+```
+Save and exit.
+
+## 4. Running the System (in separate terminals)
 
 Each component will run in a separate terminal window:
 
-### 3.1 Start `roscore`
+### 4.1 Start `roscore`
 ```bash
 cd ~/ws/covins_ws/src/covins/docker
 ./run.sh -c
 ```
 
-### 3.2 Start COVINS Server (Back-End)
+### 4.2 Start COVINS Server (Back-End)
 ```bash
 cd ~/ws/covins_ws/src/covins/docker
 ./run.sh -s ../covins_comm/config/config_comm.yaml ../covins_backend/config/config_backend.yaml
 ```
 
-### 3.3 Start ORB-SLAM3 Front-End
+### 4.3 Start ORB-SLAM3 Front-End
 
 **Edit launch file first:**
 ```bash
@@ -71,7 +91,7 @@ Save and exit.
 ./run.sh -r ../covins_comm/config/config_comm.yaml ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc.launch
 ```
 
-### 3.4 Open a Terminal Inside Docker
+### 4.4 Open a Terminal Inside Docker
 ```bash
 cd ~/ws/covins_ws/src/covins/docker
 ./run.sh -t
@@ -79,7 +99,7 @@ cd ~/ws/covins_ws/src/covins/docker
 
 ---
 
-## 4. Playing the ROS Bag (Dataset Input)
+## 5. Playing the ROS Bag (Dataset Input)
 
 Inside the Docker terminal:
 
@@ -96,21 +116,21 @@ rosbag play MH_01_easy.bag --clock
 
 ---
 
-## 5. (Optional) Running RViz
+## 6. (Optional) Running RViz
 
-### 5.1 Set ROS Environment on Host
+### 6.1 Set ROS Environment on Host
 On your normal Ubuntu (not Docker):
 ```bash
 export ROS_MASTER_URI=http://localhost:11311
 export ROS_IP=127.0.0.1
 ```
 
-### 5.2 Launch RViz
+### 6.2 Launch RViz
 ```bash
 rviz
 ```
 
-### 5.3 In RViz Add Topics
+### 6.3 In RViz Add Topics
 - `/covins_markers_be` (MarkerArray)
 - `/covins_cloud_be` (PointCloud)
 - `/tf` (TF Tree)
