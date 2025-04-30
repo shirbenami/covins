@@ -124,14 +124,16 @@ To visualize the COVINS backend output (e.g., trajectories, keyframes, landmarks
 
 On your host machine (not inside Docker), allow the root user access to the X11 display:
 
+```bash
 xhost +SI:localuser:root
-
+```
 This allows GUI applications like RViz running as root (in Docker) to display on your screen.
 
 6.2 Run the Docker Container with GUI Support
 
 Instead of using ./run.sh -t, run the Docker container manually with all required permissions for GUI:
 
+```bash
 sudo docker run -it \
   --net=host \
   --env="DISPLAY=:1" \
@@ -142,7 +144,7 @@ sudo docker run -it \
   --volume="$HOME/ws:/root/ws" \
   covins_terminal \
   bash
-
+```
 Replace covins_terminal with the name of your actual Docker image.
 
 Make sure the value of DISPLAY matches your host system (use echo $DISPLAY to check).
@@ -151,8 +153,9 @@ Make sure the value of DISPLAY matches your host system (use echo $DISPLAY to ch
 
 Once inside the Docker terminal, run:
 
+```bash
 rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins.rviz
-
+```
 You should now see the RViz GUI displaying the COVINS backend data in real time.
 
 ## Key Points to Remember
