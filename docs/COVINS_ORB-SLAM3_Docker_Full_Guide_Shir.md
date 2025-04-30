@@ -116,26 +116,44 @@ rosbag play MH_01_easy.bag --clock
 
 ---
 
-## 6. (Optional) Running RViz
+6. RViz Visualization (Optional)
 
-### 6.1 Set ROS Environment on Host
-On your normal Ubuntu (not Docker):
-```bash
-export ROS_MASTER_URI=http://localhost:11311
-export ROS_IP=127.0.0.1
-```
+To visualize the COVINS backend output (e.g., trajectories, keyframes, landmarks) on your local machine, follow the steps below. This allows you to run RViz even if you are using Docker with sudo privileges.
 
-### 6.2 Launch RViz
-```bash
-rviz
-```
+6.1 Allow X11 Access
 
-### 6.3 In RViz Add Topics
-- `/covins_markers_be` (MarkerArray)
-- `/covins_cloud_be` (PointCloud)
-- `/tf` (TF Tree)
+On your host machine (not inside Docker), allow the root user access to the X11 display:
 
----
+xhost +SI:localuser:root
+
+This allows GUI applications like RViz running as root (in Docker) to display on your screen.
+
+6.2 Run the Docker Container with GUI Support
+
+Instead of using ./run.sh -t, run the Docker container manually with all required permissions for GUI:
+
+sudo docker run -it \
+  --net=host \
+  --env="DISPLAY=:1" \
+  --env="QT_X11_NO_MITSHM=1" \
+  --env="XAUTHORITY=/run/user/1017/gdm/Xauthority" \
+  --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
+  --volume="/run/user/1017/gdm/Xauthority:/run/user/1017/gdm/Xauthority" \
+  --volume="$HOME/ws:/root/ws" \
+  covins_terminal \
+  bash
+
+Replace covins_terminal with the name of your actual Docker image.
+
+Make sure the value of DISPLAY matches your host system (use echo $DISPLAY to check).
+
+6.3 Run RViz Inside the Container
+
+Once inside the Docker terminal, run:
+
+rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins.rviz
+
+You should now see the RViz GUI displaying the COVINS backend data in real time.
 
 ## Key Points to Remember
 
