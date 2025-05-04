@@ -73,7 +73,7 @@ cd ~/ws/covins_ws/src/covins/docker
 ./run.sh -s ../covins_comm/config/config_comm.yaml ../covins_backend/config/config_backend.yaml
 ```
 
-### 4.3 Start ORB-SLAM3 Front-End
+### 4.3 Start ORB-SLAM3 Front-End (Agent 0) 
 
 **Edit launch file first:**
 ```bash
@@ -84,20 +84,52 @@ Add inside the `<node>`:
 <remap from="/camera/image_raw" to="/cam0/image_raw"/>
 <remap from="/imu" to="/imu0"/>
 ```
+Set a unique node name:
+```bash
+name="ORB_SLAM3_monoi0"
+```
 Save and exit.
 
 **Then launch:**
 ```bash
 ./run.sh -r ../covins_comm/config/config_comm.yaml ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc.launch
 ```
+### 4.4 Start ORB-SLAM3 Front-End (Agent 1)
 
-### 4.4 Open a Terminal Inside Docker
+Duplicate the launch file if needed:
+```bash
+cp ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc.launch \
+   ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc_agent1.launch
+```
+Edit the duplicated file:
+
+```bash
+nano ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc_agent1.launch
+```
+Add inside the <node>:
+
+```bash
+<remap from="/camera/image_raw" to="/cam0/image_raw1"/>
+<remap from="/imu" to="/imu1"/>
+```
+Set a unique node name:
+
+```bash
+name="ORB_SLAM3_monoi1"
+```
+Then launch:
+```bash
+./run.sh -r ../covins_comm/config/config_comm.yaml ../orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc_agent1.launch
+```
+---
+
+### 4.5 Open a Terminal Inside Docker
 ```bash
 cd ~/ws/covins_ws/src/covins/docker
 ./run.sh -t
 ```
 
----
+
 
 ## 5. Playing the ROS Bag (Dataset Input)
 
@@ -109,11 +141,19 @@ docker cp ~/datasets/EuRoC_bag/MH_01_easy.bag <your_container_name>:/root/covins
 ```
 
 Play the bag:
+Agent 0:
+
 ```bash
 cd /root/covins_ws
-rosbag play MH_01_easy.bag --clock
+rosbag play MH_01_easy.bag /cam0/image_raw:=/cam0/image_raw0 /imu0:=/imu0 --clock --start 45
 ```
 
+Agent 1:
+```bash
+cd /root/covins_ws
+rosbag play MH_02_easy.bag /cam0/image_raw:=/cam0/image_raw1 /imu0:=/imu1 --clock --start 35
+```
+Now both agents should be publishing to the COVINS back-end and sharing map data collaboratively.
 ---
 
 ## 6. RViz Visualization (Optional)
@@ -156,6 +196,7 @@ Once inside the Docker terminal, run:
 ```bash
 rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins.rviz
 ```
+
 You should now see the RViz GUI displaying the COVINS backend data in real time.
 Ensure that the covins.rviz file has the correct frame set (e.g., odom instead of world). If you encounter an error such as Fixed Frame [world] does not exist, open RViz, set the Fixed Frame to odom, and then save the configuration using:
 
