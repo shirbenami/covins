@@ -153,6 +153,10 @@ Agent 1:
 cd /root/covins_ws
 rosbag play MH_02_easy.bag /cam0/image_raw:=/cam0/image_raw1 /imu0:=/imu1 --clock --start 35
 ```
+OR 
+```bash
+rosbag play MH_01_easy.bag 
+```
 Now both agents should be publishing to the COVINS back-end and sharing map data collaboratively.
 ---
 
