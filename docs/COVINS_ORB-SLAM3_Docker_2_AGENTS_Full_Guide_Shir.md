@@ -214,6 +214,8 @@ rosrun rviz rviz -d /root/covins_ws/src/covins/covins_backend/config/covins_upda
 
 You should now see the RViz GUI displaying the COVINS backend data in real time, including keyframes, trajectories, and point clouds.
 
+* for add the images- change image topic- /cam0/image_raw, /cam0/image_raw1, /cam0/image_raw2 .
+
 ## Key Points to Remember
 
 | Point | Note |
