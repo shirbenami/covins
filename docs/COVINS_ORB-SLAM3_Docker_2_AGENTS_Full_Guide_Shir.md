@@ -86,7 +86,7 @@ Add inside the `<node>`:
 ```
 Set a unique node name:
 ```bash
-name="ORB_SLAM3_monoi0"
+<arg name="ag_n" default="0" />
 ```
 Save and exit.
 
@@ -115,7 +115,7 @@ Add inside the <node>:
 Set a unique node name:
 
 ```bash
-name="ORB_SLAM3_monoi1"
+<arg name="ag_n" default="1" />
 ```
 Then launch:
 ```bash
