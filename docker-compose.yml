@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  roscore:
+    container_name: covins_roscore
+    image: covins
+    command: /bin/bash -c "source /root/covins_ws/devel/setup.bash && roscore"
+    network_mode: host
+    restart: unless-stopped
+
+  covins_server:
+    container_name: covins_server
+    image: covins
+    depends_on:
+      - roscore
+    volumes:
+      - ./wait-for-it.sh:/wait-for-it.sh
+      - ./covins_comm/config/config_comm.yaml:/root/covins_ws/src/covins/covins_comm/config/config_comm.yaml
+      - ./covins_backend/config/config_backend.yaml:/root/covins_ws/src/covins/covins_backend/config/config_backend.yaml
+    command: >
+      bash -c "chmod +x /wait-for-it.sh && /wait-for-it.sh localhost:11311 -t 90 -- 
+      && source /root/covins_ws/devel/setup.bash 
+      && rosrun covins_backend covins_backend_node"
+    
+    network_mode: host
+    restart: unless-stopped
+
+  orbslam_client_1:
+    container_name: orbslam_client_1
+    image: covins
+    depends_on:
+      - covins_server
+    volumes:
+      - ./wait-for-it.sh:/wait-for-it.sh
+      - ./covins_comm/config/config_comm.yaml:/root/covins_ws/src/covins/covins_comm/config/config_comm.yaml
+      - ./datasets/V1_01_easy.bag:/root/covins_ws/V1_01_easy.bag
+    command: >
+      bash -c "chmod +x /wait-for-it.sh && /wait-for-it.sh localhost:11311 -t 90 --
+      && source /root/covins_ws/devel/setup.bash 
+      && roslaunch ORB_SLAM3 launch_docker_ros_euroc.launch"
+    
+    network_mode: host
+    restart: unless-stopped
+
+  orbslam_client_2:
+    container_name: orbslam_client_2
+    image: covins
+    depends_on:
+      - covins_server
+    volumes:
+      - ./wait-for-it.sh:/wait-for-it.sh
+      - ./covins_comm/config/config_comm.yaml:/root/covins_ws/src/covins/covins_comm/config/config_comm.yaml
+      - ./orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc_agent1.launch:/root/covins_ws/src/covins/orb_slam3/Examples/ROS/ORB_SLAM3/launch/launch_docker_ros_euroc_agent1.launch
+      - ./datasets/V2_01_easy.bag:/root/covins_ws/V2_01_easy.bag
+    command: >
+      bash -c "chmod +x /wait-for-it.sh && /wait-for-it.sh localhost:11311 -t 90 -- 
+      && source /root/covins_ws/devel/setup.bash 
+      && roslaunch ORB_SLAM3 launch_docker_ros_euroc_agent1.launch"
+    
+    network_mode: host
+    restart: unless-stopped
+    
+  covins_terminal:
+    container_name: covins_terminal
+    image: covins
+    depends_on:
+      - roscore
+    volumes:
+      - ./wait-for-it.sh:/wait-for-it.sh
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./covins_comm/config/config_comm.yaml:/root/covins_ws/src/covins/covins_comm/config/config_comm.yaml
+    command: >
+      bash -c "source /root/covins_ws/devel/setup.bash && bash"
+    environment:
+      - DISPLAY=${DISPLAY}
+    network_mode: host
+    stdin_open: true
+    tty: true
+
+
