@@ -229,5 +229,21 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
 
 # ✅ You're Ready to Run COVINS + ORB-SLAM3 + RViz!
 
+### Output Files
+
+* COVINS automatically saves the trajectory estimate of each agent to a file in ```covins_backend/output```. The file ```KF_<AGENT_ID>.csv``` stores the poses associated to the agent specified by ```AGENT_ID```. Each row represents a single pose.
+* COVINS can save the trajectory in 2 formats: *EuRoC format* and *TUM format*. Which one is used can be controlled via the parameter ```trajectory_format``` in ```config_backend.yaml```. 
+    * **TUM format** (default): ```timestamp[s] t_x t_y t_z q_x q_y q_z q_w```
+    * **EuRoC format**: ```timestamp[ns], t_x, t_y, t_z, q_w, q_x, q_y, q_z, vel_x, vel_y, vel_z, bias_gyro_x, bias_gyro_y, bias_gyro_z, bias_acc_x, bias_acc_y, bias_acc_z```
+    * Each output file contains a suffix indicating the format: ```_ftum``` or  ```_feuroc```
+* Trajectories in *TUM format* can be directly evaluated using the [evo evaluation tool](https://github.com/MichaelGrupp/evo).
+    * Run the evaluation e.g. as ```evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results result.zip --plot``` to perform a Sim(3) alignment reporting trajectory RMSE and scale error.
+    * The ground truth data for the individual EuRoC sequences can be found in ```<sequence>/mav0/state_groundtruth_estimate0/data.csv```
+    * To evaluate a multi-agents estimate, the individual trajectory files must be combined, e.g. with ```cat KF_0_ftum.csv KF_1_ftum.csv KF_2_ftum.csv > mh123_est.csv```. Alternatively, the ```stamped_traj_estimate.txt``` file already contains the combined trajectories from all the agents and thus can be used directly.
+    * Also, the individual ground truth information from the EuRoC sequences used to generate the estimate must be combined into a single file. We recommend doing this manually, since every file contains a header describing the data, which should not be copied multiple times.
+![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/8741fea3-c79f-4341-b0d0-2def12836ef0)
+
+![Screenshot from 2025-05-08 10-39-22](https://github.com/user-attachments/assets/a0b7bbc8-621a-48a3-aea5-d99ddb7cf444)
+
 Feel free to contribute or suggest improvements!
 
