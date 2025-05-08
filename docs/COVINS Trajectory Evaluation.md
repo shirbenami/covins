@@ -56,7 +56,16 @@ Output files include suffixes `_ftum.csv` or `_feuroc.csv`.
 ```bash
 evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results results/without_gba.zip --plot
 ```
-![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
+
+```
+Max     = 0.1529 m
+Mean    = 0.0639 m
+Median  = 0.0611 m
+Min     = 0.0067 m
+RMSE    = 0.0700 m
+Std     = 0.0286 m
+```
+
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
 #### 🔹 With GBA:
@@ -64,12 +73,25 @@ evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results results/without_gba.
 ```bash
 evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results results/with_gba.zip --plot
 ```
-![image](https://github.com/user-attachments/assets/c67a403d-ad2a-4ed8-a011-663beb53a01d)
+```
+Max     = 0.1065 m
+Mean    = 0.0199 m
+Median  = 0.0174 m
+Min     = 0.0028 m
+RMSE    = 0.0227 m
+Std     = 0.0108 m
+```
+
 ![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
 
-compare:
+#### compare results:
 ```evo_res results/*.zip -p --save_table results/table.csv```
-![image](https://github.com/user-attachments/assets/3217905b-610c-44f5-a1f2-23e1d24ad9ff)
+📊 Comparison Table
+
+| File                | RMSE   | Mean   | Median | Std    | Min    | Max    | SSE    |
+| ------------------- | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| mh123\_est\_gba.csv | 0.0228 | 0.0200 | 0.0175 | 0.0109 | 0.0029 | 0.1066 | 0.3677 |
+| mh123\_est.csv      | 0.0700 | 0.0639 | 0.0611 | 0.0286 | 0.0067 | 0.1529 | 1.4707 |
 
 ![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
 
@@ -83,23 +105,55 @@ Use a Python script to:
 3. Sync with estimated trajectory timestamps (rounded to 3 decimal places)
 4. Save as `mh123_gt_tum_synced.txt`
 
-#### 🔹 After syncing GT and converting to TUM:
+#### After syncing GT and converting to TUM:
 
-1. without GBA:
+#### 🔹 without GBA:
  ```evo_ape tum mh123_gt_tum_synced.txt mh123_est.csv --align --correct_scale -p --plot_mode xz```
 
    ![image](https://github.com/user-attachments/assets/fb5f7cd2-2fae-427c-86b8-ff6917f62507)
    ![image](https://github.com/user-attachments/assets/3d299a04-9363-45f1-ad2d-e4c30f7de4ff)
-![image](https://github.com/user-attachments/assets/aead3794-6370-496a-be62-a83c882624c6)
+| Metric | Value (m) |
+| ------ | --------- |
+| Max    | 0.120097  |
+| Mean   | 0.048176  |
+| Median | 0.042595  |
+| Min    | 0.019948  |
+| RMSE   | 0.053570  |
+| SSE    | 0.083221  |
+| Std    | 0.023425  |
 
 
-3. with GBA
+#### 🔹 with GBA
 ```evo_ape tum mh123_gt_tum_synced.txt mh123_est_gba.csv --align --correct_scale -p --plot_mode xz```
 ![image](https://github.com/user-attachments/assets/c5a355c1-f416-489c-8710-737935a83c4e)
 ![image](https://github.com/user-attachments/assets/dd38fcd3-088d-4fff-a896-27dc0cb47e77)
-![image](https://github.com/user-attachments/assets/442e3f87-2945-4682-bf95-c2bcafbf25bc)
+| Metric | Value (m) |
+| ------ | --------- |
+| Max    | 0.090646  |
+| Mean   | 0.016981  |
+| Median | 0.014023  |
+| Min    | 0.002275  |
+| RMSE   | 0.020107  |
+| SSE    | 0.286655  |
+| Std    | 0.010768  |
 
 ---
+
+
+## 📊 Result Interpretation
+
+### What do these metrics mean?
+
+| Metric     | Description                                          |
+| ---------- | ---------------------------------------------------- |
+| **Max**    | Worst-case translation error (in meters)             |
+| **Mean**   | Average translation error across all timestamps      |
+| **Median** | Middle error value – robust to outliers              |
+| **Min**    | Best-case accuracy (lowest error observed)           |
+| **RMSE**   | Root Mean Square Error – balances large/small errors |
+| **Std**    | Standard deviation – how much the error varies       |
+
+
 
 🔍 **Insights:**
 
@@ -120,3 +174,12 @@ Use a Python script to:
 ---
 
 📂 For visual examples and screenshots, refer to the attached image assets in this repo.
+
+
+
+
+
+
+
+
+---
