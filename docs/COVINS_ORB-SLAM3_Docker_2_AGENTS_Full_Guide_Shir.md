@@ -229,56 +229,5 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
 
 # ✅ You're Ready to Run COVINS + ORB-SLAM3 + RViz!
 
-### Output Files
-
-* COVINS automatically saves the trajectory estimate of each agent to a file in ```covins_backend/output```. The file ```KF_<AGENT_ID>.csv``` stores the poses associated to the agent specified by ```AGENT_ID```. Each row represents a single pose.
-``` docker cp 2b14d94a0d26:/root/covins_ws/src/covins/covins_backend/output /home/shirb/SLAM/output```
-
-* COVINS can save the trajectory in 2 formats: *EuRoC format* and *TUM format*. Which one is used can be controlled via the parameter ```trajectory_format``` in ```config_backend.yaml```. 
-    * **TUM format** (default): ```timestamp[s] t_x t_y t_z q_x q_y q_z q_w```
-    * **EuRoC format**: ```timestamp[ns], t_x, t_y, t_z, q_w, q_x, q_y, q_z, vel_x, vel_y, vel_z, bias_gyro_x, bias_gyro_y, bias_gyro_z, bias_acc_x, bias_acc_y, bias_acc_z```
-    * Each output file contains a suffix indicating the format: ```_ftum``` or  ```_feuroc```
-* Trajectories in *TUM format* can be directly evaluated using the [evo evaluation tool](https://github.com/MichaelGrupp/evo).
-    * Run the evaluation e.g. as ```evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results result.zip --plot``` to perform a Sim(3) alignment reporting trajectory RMSE and scale error.
-    * The ground truth data for the individual EuRoC sequences can be found in ```<sequence>/mav0/state_groundtruth_estimate0/data.csv```
-    * To evaluate a multi-agents estimate, the individual trajectory files must be combined, e.g. with ```cat KF_0_ftum.csv KF_1_ftum.csv KF_2_ftum.csv > mh123_est.csv```. Alternatively, the ```stamped_traj_estimate.txt``` file already contains the combined trajectories from all the agents and thus can be used directly.
-    * Also, the individual ground truth information from the EuRoC sequences used to generate the estimate must be combined into a single file. We recommend doing this manually, since every file contains a header describing the data, which should not be copied multiple times.
-
-results-
-1. without GBA:
-    ```evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results result_without_gba.zip --plot```
-![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
-![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
-
-2. with GBA:
-   ```evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results result_gba.zip --plot```
-![image](https://github.com/user-attachments/assets/c67a403d-ad2a-4ed8-a011-663beb53a01d)
-![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
-
-compare:
-```evo_res results/*.zip -p --save_table results/table.csv```
-![image](https://github.com/user-attachments/assets/3217905b-610c-44f5-a1f2-23e1d24ad9ff)
-
-![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
-
-
-after convert to TUM the GT file , compare:
-
-1. without GBA:
-   ![image](https://github.com/user-attachments/assets/fb5f7cd2-2fae-427c-86b8-ff6917f62507)
-   ![image](https://github.com/user-attachments/assets/3d299a04-9363-45f1-ad2d-e4c30f7de4ff)
-![image](https://github.com/user-attachments/assets/aead3794-6370-496a-be62-a83c882624c6)
-
-
-3. with GBA
-```evo_ape tum mh123_gt_tum_synced.txt mh123_est_gba.csv --align --correct_scale -p --plot_mode xz```
-![image](https://github.com/user-attachments/assets/c5a355c1-f416-489c-8710-737935a83c4e)
-![image](https://github.com/user-attachments/assets/dd38fcd3-088d-4fff-a896-27dc0cb47e77)
-![image](https://github.com/user-attachments/assets/442e3f87-2945-4682-bf95-c2bcafbf25bc)
-
-
-
-
-
 Feel free to contribute or suggest improvements!
 
