@@ -246,14 +246,19 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
 
 results-
 1. without GBA:
+    ```evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results result_without_gba.zip --plot```
 ![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
-2. with GBA:
+3. with GBA:
+   ```evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results result_gba.zip --plot```
 ![image](https://github.com/user-attachments/assets/c67a403d-ad2a-4ed8-a011-663beb53a01d)
 ![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
 
-compare
+compare:
+```evo_res results/*.zip -p --save_table results/table.csv```
+![image](https://github.com/user-attachments/assets/3217905b-610c-44f5-a1f2-23e1d24ad9ff)
+
 ![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
 
 
