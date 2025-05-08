@@ -232,6 +232,8 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
 ### Output Files
 
 * COVINS automatically saves the trajectory estimate of each agent to a file in ```covins_backend/output```. The file ```KF_<AGENT_ID>.csv``` stores the poses associated to the agent specified by ```AGENT_ID```. Each row represents a single pose.
+``` docker cp 2b14d94a0d26:/root/covins_ws/src/covins/covins_backend/output /home/shirb/SLAM/output```
+
 * COVINS can save the trajectory in 2 formats: *EuRoC format* and *TUM format*. Which one is used can be controlled via the parameter ```trajectory_format``` in ```config_backend.yaml```. 
     * **TUM format** (default): ```timestamp[s] t_x t_y t_z q_x q_y q_z q_w```
     * **EuRoC format**: ```timestamp[ns], t_x, t_y, t_z, q_w, q_x, q_y, q_z, vel_x, vel_y, vel_z, bias_gyro_x, bias_gyro_y, bias_gyro_z, bias_acc_x, bias_acc_y, bias_acc_z```
@@ -242,8 +244,15 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
     * To evaluate a multi-agents estimate, the individual trajectory files must be combined, e.g. with ```cat KF_0_ftum.csv KF_1_ftum.csv KF_2_ftum.csv > mh123_est.csv```. Alternatively, the ```stamped_traj_estimate.txt``` file already contains the combined trajectories from all the agents and thus can be used directly.
     * Also, the individual ground truth information from the EuRoC sequences used to generate the estimate must be combined into a single file. We recommend doing this manually, since every file contains a header describing the data, which should not be copied multiple times.
 
+results-
+1. without GBA:
 ![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
+
+2. with GBA:
+![image](https://github.com/user-attachments/assets/c67a403d-ad2a-4ed8-a011-663beb53a01d)
+![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
+
 
 
 
