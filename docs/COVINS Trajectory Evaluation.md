@@ -110,9 +110,7 @@ Use a Python script to:
 #### 🔹 without GBA:
  ```evo_ape tum mh123_gt_tum_synced.txt mh123_est.csv --align --correct_scale -p --plot_mode xz```
 
-   ![image](https://github.com/user-attachments/assets/fb5f7cd2-2fae-427c-86b8-ff6917f62507)
-   ![image](https://github.com/user-attachments/assets/3d299a04-9363-45f1-ad2d-e4c30f7de4ff)
-| Metric | Value (m) |
+ | Metric | Value (m) |
 | ------ | --------- |
 | Max    | 0.120097  |
 | Mean   | 0.048176  |
@@ -122,11 +120,14 @@ Use a Python script to:
 | SSE    | 0.083221  |
 | Std    | 0.023425  |
 
+   ![image](https://github.com/user-attachments/assets/fb5f7cd2-2fae-427c-86b8-ff6917f62507)
+   ![image](https://github.com/user-attachments/assets/3d299a04-9363-45f1-ad2d-e4c30f7de4ff)
+
+
 
 #### 🔹 with GBA
 ```evo_ape tum mh123_gt_tum_synced.txt mh123_est_gba.csv --align --correct_scale -p --plot_mode xz```
-![image](https://github.com/user-attachments/assets/c5a355c1-f416-489c-8710-737935a83c4e)
-![image](https://github.com/user-attachments/assets/dd38fcd3-088d-4fff-a896-27dc0cb47e77)
+
 | Metric | Value (m) |
 | ------ | --------- |
 | Max    | 0.090646  |
@@ -136,6 +137,10 @@ Use a Python script to:
 | RMSE   | 0.020107  |
 | SSE    | 0.286655  |
 | Std    | 0.010768  |
+
+![image](https://github.com/user-attachments/assets/c5a355c1-f416-489c-8710-737935a83c4e)
+![image](https://github.com/user-attachments/assets/dd38fcd3-088d-4fff-a896-27dc0cb47e77)
+
 
 ---
 
