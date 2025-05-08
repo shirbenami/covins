@@ -56,15 +56,14 @@ Output files include suffixes `_ftum.csv` or `_feuroc.csv`.
 ```bash
 evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results results/without_gba.zip --plot
 ```
+| Metric | Value (m) |
+| ------ | --------- |
+| Max    |  0.1529 m |
+| Mean   | 0.0639 m  |
+| Median | 0.0611 m  |
+| Min    | 0.0067 m  |
+| Std    | 0.0286 m  |
 
-```
-Max     = 0.1529 m
-Mean    = 0.0639 m
-Median  = 0.0611 m
-Min     = 0.0067 m
-RMSE    = 0.0700 m
-Std     = 0.0286 m
-```
 
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
@@ -73,14 +72,15 @@ Std     = 0.0286 m
 ```bash
 evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results results/with_gba.zip --plot
 ```
-```
-Max     = 0.1065 m
-Mean    = 0.0199 m
-Median  = 0.0174 m
-Min     = 0.0028 m
-RMSE    = 0.0227 m
-Std     = 0.0108 m
-```
+| Metric | Value (m) |
+| ------ | --------- |
+| Max    |  0.1065 m |
+| Mean   | 0.0199 m  |
+| Median | 0.0174 m  |
+| Min    |  0.0028 m |
+| RMSE   | 0.0227 m  |
+| Std    | 0.0108 m  |
+
 
 ![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
 
