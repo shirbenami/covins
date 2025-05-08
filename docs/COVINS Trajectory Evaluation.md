@@ -67,6 +67,8 @@ evo_ape euroc mh123_gt.csv mh123_est.csv -va --save_results results/without_gba.
 
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
+The spatial APE plots show that most of the estimated trajectory maintains low error (2–7 cm), especially in the central segments. However, local spikes in error are visible at trajectory edges, often due to abrupt motion or visually ambiguous regions. The time-based APE graph confirms this consistency, with the mean and RMSE around 5–6 cm and only a few short-lived deviations. These results suggest good global alignment, but with room for improvement in handling challenging regions (e.g., by enhancing visual tracking or incorporating loop closures).
+
 #### 🔹 With GBA:
 
 ```bash
