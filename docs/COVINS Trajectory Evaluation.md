@@ -90,8 +90,10 @@ evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results results/with_gba
 
 | File                | RMSE   | Mean   | Median | Std    | Min    | Max    | SSE    |
 | ------------------- | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| mh123\_est\_gba.csv | 0.0228 | 0.0200 | 0.0175 | 0.0109 | 0.0029 | 0.1066 | 0.3677 |
 | mh123\_est.csv      | 0.0700 | 0.0639 | 0.0611 | 0.0286 | 0.0067 | 0.1529 | 1.4707 |
+| mh123\_est\_gba.csv | 0.0228 | 0.0200 | 0.0175 | 0.0109 | 0.0029 | 0.1066 | 0.3677 |
+
+> 🔍 The results clearly show that enabling GBA reduces the mean APE from 6.4 cm to 2.0 cm, and the RMSE from 7 cm to 2.3 cm — significantly improving global consistency.
 
 ![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
 
