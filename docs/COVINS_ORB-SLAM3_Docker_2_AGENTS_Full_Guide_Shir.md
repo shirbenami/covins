@@ -243,9 +243,9 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
     * Also, the individual ground truth information from the EuRoC sequences used to generate the estimate must be combined into a single file. We recommend doing this manually, since every file contains a header describing the data, which should not be copied multiple times.
 
 ![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
+![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
 
-![Screenshot from 2025-05-08 10-39-22](https://github.com/user-attachments/assets/a0b7bbc8-621a-48a3-aea5-d99ddb7cf444)
 
 Feel free to contribute or suggest improvements!
 
