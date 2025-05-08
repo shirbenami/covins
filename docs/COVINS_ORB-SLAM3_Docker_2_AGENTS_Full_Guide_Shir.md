@@ -250,7 +250,7 @@ results-
 ![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
 ![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/7742a991-09ad-48a4-b366-1b72f2d3c753)
 
-3. with GBA:
+2. with GBA:
    ```evo_ape euroc mh123_gt.csv mh123_est_gba.csv -va --save_results result_gba.zip --plot```
 ![image](https://github.com/user-attachments/assets/c67a403d-ad2a-4ed8-a011-663beb53a01d)
 ![Screenshot from 2025-05-08 11-13-40](https://github.com/user-attachments/assets/ca26a449-7f5f-45c9-b6eb-84ab76438103)
@@ -260,6 +260,23 @@ compare:
 ![image](https://github.com/user-attachments/assets/3217905b-610c-44f5-a1f2-23e1d24ad9ff)
 
 ![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
+
+
+after convert to TUM the GT file , compare:
+
+1. without GBA:
+   ![image](https://github.com/user-attachments/assets/fb5f7cd2-2fae-427c-86b8-ff6917f62507)
+   ![image](https://github.com/user-attachments/assets/3d299a04-9363-45f1-ad2d-e4c30f7de4ff)
+![image](https://github.com/user-attachments/assets/aead3794-6370-496a-be62-a83c882624c6)
+
+
+3. with GBA
+```evo_ape tum mh123_gt_tum_synced.txt mh123_est_gba.csv --align --correct_scale -p --plot_mode xz```
+![image](https://github.com/user-attachments/assets/c5a355c1-f416-489c-8710-737935a83c4e)
+![image](https://github.com/user-attachments/assets/dd38fcd3-088d-4fff-a896-27dc0cb47e77)
+![image](https://github.com/user-attachments/assets/442e3f87-2945-4682-bf95-c2bcafbf25bc)
+
+
 
 
 
