@@ -241,7 +241,9 @@ You should now see the RViz GUI displaying the COVINS backend data in real time,
     * The ground truth data for the individual EuRoC sequences can be found in ```<sequence>/mav0/state_groundtruth_estimate0/data.csv```
     * To evaluate a multi-agents estimate, the individual trajectory files must be combined, e.g. with ```cat KF_0_ftum.csv KF_1_ftum.csv KF_2_ftum.csv > mh123_est.csv```. Alternatively, the ```stamped_traj_estimate.txt``` file already contains the combined trajectories from all the agents and thus can be used directly.
     * Also, the individual ground truth information from the EuRoC sequences used to generate the estimate must be combined into a single file. We recommend doing this manually, since every file contains a header describing the data, which should not be copied multiple times.
-![Screenshot from 2025-05-08 10-38-31](https://github.com/user-attachments/assets/8741fea3-c79f-4341-b0d0-2def12836ef0)
+
+![image](https://github.com/user-attachments/assets/8b854b70-94ec-4315-9576-fbcedb1ef708)
+
 
 ![Screenshot from 2025-05-08 10-39-22](https://github.com/user-attachments/assets/a0b7bbc8-621a-48a3-aea5-d99ddb7cf444)
 
