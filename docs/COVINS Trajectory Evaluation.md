@@ -117,6 +117,33 @@ In this 3D error map, the estimated trajectory closely follows the reference, wi
 ![image](https://github.com/user-attachments/assets/e30e18df-e9aa-47e5-8e8c-153a111851c5)
 
 
+### 🧪 Comparison: Independent Agents vs. Multi-Agent COVINS
+
+To assess the contribution of collaborative mapping in COVINS, we evaluated three agents separately, without merging their maps. Each trajectory was aligned and compared independently, and their results were averaged.
+
+#### 📊 APE Results (Averaged across independent agents):
+
+| Metric | Value (m) |
+|--------|-----------|
+| RMSE   | 0.0932    |
+| Mean   | 0.0859    |
+| Median | 0.0774    |
+| Std    | 0.0358    |
+| Min    | 0.0245    |
+| Max    | 0.1805    |
+| SSE    | 1.2151    |
+
+#### 📊 Comparison Table
+
+| Configuration              | RMSE   | Mean   | Median | Std    | Min    | Max    | SSE    |
+|----------------------------|--------|--------|--------|--------|--------|--------|--------|
+| Independent Agents (avg)   | 0.0932 | 0.0859 | 0.0774 | 0.0358 | 0.0245 | 0.1805 | 1.2151 |
+| Multi-Agent (no GBA)       | 0.0700 | 0.0639 | 0.0611 | 0.0286 | 0.0067 | 0.1529 | 1.4707 |
+| Multi-Agent with GBA       | **0.0228** | **0.0200** | **0.0175** | **0.0109** | **0.0029** | **0.1066** | **0.3677** |
+
+🔍 **Conclusion:**  
+Multi-agent mapping in COVINS significantly reduces pose estimation error compared to independent agents, particularly when using GBA. RMSE dropped from ~9.3 cm (no collaboration) to ~2.3 cm with GBA — a ~75% improvement in accuracy.
+
 
 🔍 **Insights:**
 
