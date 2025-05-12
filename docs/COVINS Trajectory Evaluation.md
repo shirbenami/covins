@@ -145,6 +145,52 @@ To assess the contribution of collaborative mapping in COVINS, we evaluated thre
 Multi-agent mapping in COVINS significantly reduces pose estimation error compared to independent agents, particularly when using GBA. RMSE dropped from ~9.3 cm (no collaboration) to ~2.3 cm with GBA — a ~75% improvement in accuracy.
 
 
+## 📊 GBA Comparison: Every 50 KF vs Once at the End
+
+### One agent GBA test:
+#### 🔁 GBA Every 50 KF
+
+| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason                  | Notes                   |
+|-------|----------|------------------|-------------|------------|----------------------------------|--------------------------|
+| 1     | 60       | 2610             | 2508        | 102        | Problematic points (map checks) | After first 50 KF        |
+| 2     | 103      | 3963             | 3909        | 54         | map checks                       | After 100 KF             |
+| 3     | 153      | 5106             | 5053        | 53         | map checks                       | After 150 KF             |
+| –     | 171      | –                | –           | –          | –                                | PGO also triggered       |
+
+
+### 🧪 GBA Only Once at the End
+
+| GBA #    | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason | Notes                                      |
+|----------|----------|------------------|-------------|------------|----------------|---------------------------------------------|
+| Final GBA | 171      | 5644             | 5602        | 42         | map checks     | Only one GBA, after loop closures and PGO   |
+
+### 🤖 Multi-Agent GBA:
+
+#### 🔁 GBA Every 50 KF
+
+| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason         | Notes                              |
+|-------|----------|------------------|--------------|-------------|-------------------------|-------------------------------------|
+| 1     | 59       | 2602             | 2515         | 87          | map checks              | After first 50 KF                  |
+| 2     | 165      | 6722             | 6505         | 217         | map checks              | After 150 KF + map merges          |
+| 3     | 218      | 8112             | 8013         | 99          | map checks              | After 200 KF                       |
+| 4     | 268      | 9839             | 9638         | 201         | map checks              | After 250 KF                       |
+| 5     | 325      | 11215            | 11154        | 61          | map checks              | After 300 KF                       |
+| 6     | 386      | 12325            | 12277        | 48          | map checks              | After 350 KF                       |
+| 7     | 440      | 13319            | 13252        | 67          | map checks              | After 400 KF + several PGOs        |
+
+### 🧪 GBA Only Once at the End
+| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason | Notes                     |
+|-------|----------|------------------|--------------|-------------|------------------|----------------------------|
+| Final | 425      | 12915            | 12857        | 58          | map checks       | Single GBA after full run |
+
+### results:
+gba ones:
+![gba_once](https://github.com/user-attachments/assets/8f19e4c2-494e-49c1-8697-32844c08a475)
+gba every 50 kf:
+![gba_50_kf](https://github.com/user-attachments/assets/79d314c4-0045-4b7b-80e4-01d437889fce)
+
+
+
 🔍 **Insights:**
 
 * Low RMSE and mean APE (< 2 cm) indicate high trajectory accuracy.
