@@ -145,26 +145,12 @@ To assess the contribution of collaborative mapping in COVINS, we evaluated thre
 Multi-agent mapping in COVINS significantly reduces pose estimation error compared to independent agents, particularly when using GBA. RMSE dropped from ~9.3 cm (no collaboration) to ~2.3 cm with GBA — a ~75% improvement in accuracy.
 
 
-## 📊 GBA Comparison: Every 50 KF vs Once at the End
-
-### One agent GBA test:
-#### 🔁 GBA Every 50 KF
-
-| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason                  | Notes                   |
-|-------|----------|------------------|-------------|------------|----------------------------------|--------------------------|
-| 1     | 60       | 2610             | 2508        | 102        | Problematic points (map checks) | After first 50 KF        |
-| 2     | 103      | 3963             | 3909        | 54         | map checks                       | After 100 KF             |
-| 3     | 153      | 5106             | 5053        | 53         | map checks                       | After 150 KF             |
-| –     | 171      | –                | –           | –          | –                                | PGO also triggered       |
-
+## 📊 Multi-Agent GBA Comparison: Every 50 KF vs Once at the End
 
 ### 🧪 GBA Only Once at the End
-
-| GBA #    | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason | Notes                                      |
-|----------|----------|------------------|-------------|------------|----------------|---------------------------------------------|
-| Final GBA | 171      | 5644             | 5602        | 42         | map checks     | Only one GBA, after loop closures and PGO   |
-
-### 🤖 Multi-Agent GBA:
+| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason | Notes                     |
+|-------|----------|------------------|--------------|-------------|------------------|----------------------------|
+| Final | 425      | 12915            | 12857        | 58          | map checks       | Single GBA after full run |
 
 #### 🔁 GBA Every 50 KF
 
@@ -178,16 +164,27 @@ Multi-agent mapping in COVINS significantly reduces pose estimation error compar
 | 6     | 386      | 12325            | 12277        | 48          | map checks              | After 350 KF                       |
 | 7     | 440      | 13319            | 13252        | 67          | map checks              | After 400 KF + several PGOs        |
 
-### 🧪 GBA Only Once at the End
-| GBA # | KF Count | LM Count Before | LM Included | LM Removed | Removal Reason | Notes                     |
-|-------|----------|------------------|--------------|-------------|------------------|----------------------------|
-| Final | 425      | 12915            | 12857        | 58          | map checks       | Single GBA after full run |
 
 ### results:
 gba ones:
-![gba_once](https://github.com/user-attachments/assets/8f19e4c2-494e-49c1-8697-32844c08a475)
+![gba_once_catKF](https://github.com/user-attachments/assets/ebbdb936-f65d-4d17-b65f-9080e3c85903)
+
 gba every 50 kf:
-![gba_50_kf](https://github.com/user-attachments/assets/79d314c4-0045-4b7b-80e4-01d437889fce)
+![gba_50_kf_catKF](https://github.com/user-attachments/assets/766ccc92-c38f-4eb0-b460-261144f21783)
+
+#### compare results:
+```evo_res results/*.zip -p --save_table results/table.csv```
+📊 Comparison Table
+
+| File                | RMSE    | Mean    | Median  | Std     | Min     | Max     | SSE     |
+|---------------------|---------|---------|---------|---------|---------|---------|----------|
+| GBA Once at End     | 0.0364  | 0.0314  | 0.0273  | 0.0185  | 0.0043  | 0.0929  | 0.5635   |
+| GBA Every 50 KF     | 0.0404  | 0.0360  | 0.0356  | 0.0184  | 0.0028  | 0.1155  | 0.7194   |
+
+### 📌 Key Observations
+- GBA Once has **slightly lower RMSE and Mean error**, indicating marginally better global accuracy.
+- GBA Every 50 KF provides **ongoing cleaning**, which may help in dynamic or large-scale multi-agent scenarios.
+- Standard deviation is nearly identical, suggesting similar consistency across both runs.
 
 
 
