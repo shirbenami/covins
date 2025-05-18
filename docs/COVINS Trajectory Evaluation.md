@@ -186,14 +186,6 @@ gba every 50 kf:
 - GBA Every 50 KF provides **ongoing cleaning**, which may help in dynamic or large-scale multi-agent scenarios.
 - Standard deviation is nearly identical, suggesting similar consistency across both runs.
 
-
-
-🔍 **Insights:**
-
-* Low RMSE and mean APE (< 2 cm) indicate high trajectory accuracy.
-* The Sim(3) alignment corrects for rotation, translation, and scale.
-* The color-coded map view shows where error is concentrated (usually edges).
-
 ---
 
 ## 📌 Summary
