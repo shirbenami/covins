@@ -195,6 +195,20 @@ gba ones:
 gba every 50 kf:
 ![Screenshot from 2025-05-18 14-13-34](https://github.com/user-attachments/assets/4178fe4f-9006-40db-8e0d-bfafc2acff8b)
 
+#### compare results:
+```evo_res results/*.zip -p --save_table results/table.csv```
+![Screenshot from 2025-05-18 14-20-59](https://github.com/user-attachments/assets/c5a3b960-391d-4721-86f2-4ef9d7e69cd3)
+
+📊 Comparison Table
+
+| File                | RMSE    | Mean    | Median  | Std     | Min     | Max     | SSE     |
+|---------------------|---------|---------|---------|---------|---------|---------|----------|
+| GBA Once at End     | 0.0268  | 0.0239  | 0.0239  | 0.0185  | 0.0043  | 0.1216  | 0.4964   |
+| GBA Every 100 KF     | 0.0442  | 0.0412  | 0.0407  | 0.0160  | 0.0061| 0.140  | 1.285   |
+
+### 📌 Key Observations
+- GBA Once has **lower RMSE and Mean error**, indicating marginally better global accuracy.
+- **Covins gets better results than Covins-G for 3 agents in ORB-SLAM3**
 
 ## 📌 Summary
 
