@@ -166,6 +166,8 @@ Multi-agent mapping in COVINS significantly reduces pose estimation error compar
 
 
 ### results:
+
+### covins-G :
 gba ones:
 ![gba_once_catKF](https://github.com/user-attachments/assets/ebbdb936-f65d-4d17-b65f-9080e3c85903)
 
@@ -186,7 +188,13 @@ gba every 50 kf:
 - GBA Every 50 KF provides **ongoing cleaning**, which may help in dynamic or large-scale multi-agent scenarios.
 - Standard deviation is nearly identical, suggesting similar consistency across both runs.
 
----
+### covins:
+gba ones:
+![Screenshot from 2025-05-18 14-15-57](https://github.com/user-attachments/assets/cebd598a-ee2b-47c4-bd22-14cec3e8b6fb)
+
+gba every 50 kf:
+![Screenshot from 2025-05-18 14-13-34](https://github.com/user-attachments/assets/4178fe4f-9006-40db-8e0d-bfafc2acff8b)
+
 
 ## 📌 Summary
 
