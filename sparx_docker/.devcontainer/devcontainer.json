@@ -1,0 +1,21 @@
+{
+  "name": "covins-dev",
+  "build": {
+    "dockerfile": "sparx_docker/Dockerfile.dev",
+    "context": ".."
+  },
+  "workspaceFolder": "/root/covins_ws/src/covins",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/root/covins_ws/src/covins,type=bind"
+  ],
+  "postCreateCommand": "chmod +x install_file.sh && ./install_file.sh -j$(nproc) && cd orb_slam3 && chmod +x build.sh && ./build.sh",
+  "extensions": [
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "ms-azuretools.vscode-docker"
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "remoteUser": "root"
+}

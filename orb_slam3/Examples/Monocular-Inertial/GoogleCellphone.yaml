@@ -1,0 +1,76 @@
+%YAML:1.0
+
+# Example for a phone camera, you must fill in your values!
+Camera.type: "PinHole"
+Camera.fx: 520.9
+Camera.fy: 521.0
+Camera.cx: 325.1
+Camera.cy: 249.7
+
+Camera.k1: -0.326
+Camera.k2: 0.105
+Camera.p1: -0.0005
+Camera.p2: 0.0003
+
+
+# Camera resolution
+Camera.width: 640
+Camera.height: 480
+
+# Camera frames per second 
+Camera.fps: 20.0
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# IMU-to-camera (identity as placeholder)
+Tbc: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+
+# IMU noise (example values)
+IMU.NoiseGyro: 1.7e-4
+IMU.NoiseAcc: 2.0e-3
+IMU.GyroWalk: 1.9393e-05
+IMU.AccWalk: 3.0e-03
+IMU.Frequency: 200
+
+
+
+
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000 # 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize:2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5 # -1.8
+Viewer.ViewpointF: 500

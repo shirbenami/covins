@@ -136,6 +136,13 @@ void LocalMapping::Run()
                             mTinit += mpCurrentKeyFrame->mTimeStamp - mpCurrentKeyFrame->mPrevKF->mTimeStamp;
                         if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2())
                         {
+                            // Add debug prints for motion and time
+                            std::cout << "[DEBUG] mTinit: " << mTinit
+                                    << ", dist: " << dist
+                                    << ", mTinit<10.f: " << (mTinit<10.f)
+                                    << ", dist<0.02: " << (dist<0.02)
+                                    << std::endl;
+
                             if((mTinit<10.f) && (dist<0.02))
                             {
                                 cout << "Not enough motion for initializing. Reseting..." << endl;
@@ -206,10 +213,17 @@ void LocalMapping::Run()
                 // Initialize IMU here
                 if(!mpCurrentKeyFrame->GetMap()->isImuInitialized() && mbInertial)
                 {
+                    std::cout << "[LocalMapping] IMU not initialized, mbInertial=" << mbInertial << std::endl;
                     if (mbMonocular)
+                    {
+                        std::cout << "[LocalMapping] Calling InitializeIMU for monocular" << std::endl;
                         InitializeIMU(1e2, 1e10, true);
+                    }
                     else
+                    {
+                        std::cout << "[LocalMapping] Calling InitializeIMU for non-monocular" << std::endl;
                         InitializeIMU(1e2, 1e5, true);
+                    }
                 }
 
 
@@ -1343,8 +1357,12 @@ bool LocalMapping::isFinished()
 
 void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
 {
+    std::cout << "[InitializeIMU] Called with priorG=" << priorG << ", priorA=" << priorA << ", bFIBA=" << bFIBA << std::endl;
     if (mbResetRequested)
+    {
+        std::cout << "[InitializeIMU] Early return: mbResetRequested is true" << std::endl;
         return;
+    }
 
     float minTime;
     int nMinKF;
@@ -1352,16 +1370,23 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     {
         minTime = 2.0;
         nMinKF = 10;
+        std::cout << "[InitializeIMU] Monocular mode: minTime=" << minTime << ", nMinKF=" << nMinKF << std::endl;
     }
     else
     {
         minTime = 1.0;
         nMinKF = 10;
+        std::cout << "[InitializeIMU] Non-monocular mode: minTime=" << minTime << ", nMinKF=" << nMinKF << std::endl;
+
     }
 
 
     if(mpAtlas->KeyFramesInMap()<nMinKF)
+    {
+        std::cout << "[InitializeIMU] mpAtlas->KeyFramesInMap() = " << mpAtlas->KeyFramesInMap() << std::endl;
+        std::cout << "[InitializeIMU] Early return: Not enough keyframes in map" << std::endl;
         return;
+    }
 
     // Retrieve all keyframe in temporal order
     list<KeyFrame*> lpKF;
@@ -1375,8 +1400,10 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     vector<KeyFrame*> vpKF(lpKF.begin(),lpKF.end());
 
     if(vpKF.size()<nMinKF)
+    {
+        std::cout << "[InitializeIMU] Early return: vpKF.size()=" << vpKF.size() << " < nMinKF=" << nMinKF << std::endl;
         return;
-
+    }
     mFirstTs=vpKF.front()->mTimeStamp;
     if(mpCurrentKeyFrame->mTimeStamp-mFirstTs<minTime)
         return;
@@ -1385,6 +1412,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
 
     while(CheckNewKeyFrames())
     {
+        std::cout << "[InitializeIMU] Processing new keyframe in queue." << std::endl;
         ProcessNewKeyFrame();
         vpKF.push_back(mpCurrentKeyFrame);
         lpKF.push_back(mpCurrentKeyFrame);
@@ -1396,6 +1424,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     // Compute and KF velocities mRwg estimation
     if (!mpCurrentKeyFrame->GetMap()->isImuInitialized())
     {
+        std::cout << "[InitializeIMU] IMU not initialized, estimating gravity direction and velocities." << std::endl;
         cv::Mat cvRwg;
         cv::Mat dirG = cv::Mat::zeros(3,1,CV_32F);
         for(vector<KeyFrame*>::iterator itKF = vpKF.begin(); itKF!=vpKF.end(); itKF++)
@@ -1424,6 +1453,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     }
     else
     {
+        std::cout << "[InitializeIMU] IMU already initialized, using existing biases." << std::endl;
         mRwg = Eigen::Matrix3d::Identity();
         mbg = Converter::toVector3d(mpCurrentKeyFrame->GetGyroBias());
         mba = Converter::toVector3d(mpCurrentKeyFrame->GetAccBias());

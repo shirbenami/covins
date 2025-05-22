@@ -1996,14 +1996,23 @@ void Tracking::Track()
 #endif
         // If we have an initial estimation of the camera pose and matching. Track the local map.
         if(!mbOnlyTracking)
-        {
+        {   
+            std::cout << "[DEBUG] Before TrackLocalMap: bOK=" << bOK << ", mState=" << mState << std::endl;
             if(bOK)
             {
                 bOK = TrackLocalMap();
+                std::cout << "[DEBUG] After TrackLocalMap: bOK=" << bOK << std::endl;
 
             }
             if(!bOK)
-                cout << "Fail to track local map!" << endl;
+            {
+                std::cout << "[DEBUG] TrackLocalMap failed. mState=" << mState
+                          << ", mnMatchesInliers=" << mnMatchesInliers
+                          << ", mCurrentFrame.N=" << mCurrentFrame.N
+                          << std::endl;
+                std::cout << "Fail to track local map!" << std::endl;
+            }
+                
         }
         else
         {
@@ -2021,9 +2030,18 @@ void Tracking::Track()
             if (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO)
             {
                 Verbose::PrintMess("Track lost for less than one second...", Verbose::VERBOSITY_NORMAL);
+                std::cout << "[Tracking] Track lost for less than one second..." << std::endl;
+                // Add detailed debug prints:
+                std::cout << "[DEBUG] mCurrentFrame.mnId: " << mCurrentFrame.mnId << std::endl;
+                std::cout << "[DEBUG] mnLastRelocFrameId: " << mnLastRelocFrameId << std::endl;
+                std::cout << "[DEBUG] mnFramesToResetIMU: " << mnFramesToResetIMU << std::endl;
+                std::cout << "[DEBUG] mSensor: " << mSensor << std::endl;
+                std::cout << "[DEBUG] pCurrentMap->isImuInitialized(): " << pCurrentMap->isImuInitialized() << std::endl;
+                std::cout << "[DEBUG] pCurrentMap->GetIniertialBA2(): " << pCurrentMap->GetIniertialBA2() << std::endl;
+
                 if(!pCurrentMap->isImuInitialized() || !pCurrentMap->GetIniertialBA2())
                 {
-                    cout << "IMU is not or recently initialized. Reseting active map..." << endl;
+                    std::cout << "IMU is not or recently initialized. Reseting active map..." << std::endl;
                     mpSystem->ResetActiveMap();
                 }
 

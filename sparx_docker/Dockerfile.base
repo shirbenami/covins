@@ -1,0 +1,133 @@
+# Dockerfile.base
+FROM osrf/ros:melodic-desktop-bionic
+
+ENV CATKIN_WS=/root/covins_ws
+
+# Fix keys for apt (from original Dockerfile)
+RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 \
+    && apt-key del 421C365BD9FF1F717815A3895523BAEEB01FA116
+
+# Install ROS desktop full and essential build tools/libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ros-melodic-desktop-full \
+    ros-melodic-serial \
+    ros-melodic-pcl-ros \
+    software-properties-common \
+    python3-catkin-tools \
+    python3-wstool \
+    vim \
+    sudo \
+    net-tools \
+    autoconf \
+    mesa-utils \
+    gedit \
+    gdb \
+    cgdb \
+    unzip \
+    cmake \
+    doxygen \
+    libgoogle-glog-dev \
+    libatlas-base-dev \
+    libsuitesparse-dev \
+    libyaml-cpp-dev \
+    libvtk6-dev \
+    libv4l-dev \
+    libomp-dev \
+    libglew-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get upgrade -y
+
+# Set up environment variables
+ENV TERM=xterm
+ENV PYTHONIOENCODING=UTF-8
+
+WORKDIR $CATKIN_WS
+
+# Source ROS melodic setup for all subsequent build steps using bash
+RUN /bin/bash -c ". /opt/ros/melodic/setup.bash"
+
+# Clone vision_opencv and modify cv_bridge (from original Dockerfile)
+RUN /bin/bash -c "git clone https://github.com/ros-perception/vision_opencv.git src/vision_opencv && \
+    cd src/vision_opencv && \
+    git checkout melodic && \
+    cd cv_bridge && \
+    sed -i '4d' CMakeLists.txt && \
+    sed -i '3afind_package(catkin REQUIRED COMPONENTS rosconsole sensor_msgs opencv3_catkin)' CMakeLists.txt"
+
+# Copy the entire local 'covins' source directory into the workspace.
+# This ensures that all local packages like covins_comm are present.
+COPY ./ $CATKIN_WS/src/covins
+
+# Initialize wstool and fetch external dependencies.
+# The dependencies.rosinstall is now located within the copied covins directory.
+RUN /bin/bash -c "wstool init src || true && \
+    wstool merge -t src src/covins/dependencies.rosinstall && \
+    wstool update -t src"
+
+# Fix Eigen dependencies (from install_file.sh)
+RUN /bin/bash -c "chmod +x src/covins/fix_eigen_deps.sh && \
+    src/covins/fix_eigen_deps.sh"
+
+# Configure catkin workspace (from original Dockerfile and install_file.sh)
+RUN /bin/bash -c "catkin config \
+      --extend /opt/ros/melodic \
+      --merge-devel \
+      --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+
+# Build core third-party catkin packages and covins_comm first
+# covins_comm is now guaranteed to be in the workspace due to the COPY command.
+ARG NR_JOBS_BASE="" # Use a separate build arg for base image if needed
+RUN /bin/bash -c "catkin build -j ${NR_JOBS_BASE:-$(nproc)} eigen_catkin opencv3_catkin covins_comm"
+
+# Source devel space after building core catkin packages to make them discoverable
+RUN /bin/bash -c ". devel/setup.bash"
+
+# Now build cv_bridge separately
+RUN /bin/bash -c "catkin build -j ${NR_JOBS_BASE:-$(nproc)} cv_bridge"
+
+# Build DBoW2 for covins_backend (in-place build, from install_file.sh)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/covins_backend/thirdparty/DBoW2 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS_BASE:-$(nproc)}"
+
+# Build Pangolin (in-place build, from install_file.sh)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/pangolin && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS_BASE:-$(nproc)}"
+
+# Build ORB_SLAM3 Thirdparty DBoW2 (in-place build, from install_file.sh)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3/Thirdparty/DBoW2 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS_BASE:-$(nproc)}"
+
+# Build ORB_SLAM3 Thirdparty g2o (in-place build, from install_file.sh)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3/Thirdparty/g2o && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS_BASE:-$(nproc)}"
+
+# Extract vocabularies (from install_file.sh)
+RUN /bin/bash -c "cd src/covins/covins_backend/config && \
+    [ -f ORBvoc.txt ] || unzip ORBvoc.txt.zip"
+RUN /bin/bash -c "cd src/covins/orb_slam3/Vocabulary && \
+    [ -f ORBvoc.txt ] || tar -xf ORBvoc.txt.tar.gz"
+
+# Build ORB_SLAM3 library (non-ROS part, from install_file.sh)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS_BASE:-$(nproc)}"
+
+# Set up the ros_entrypoint.sh to source your workspace
+RUN sed -i '/exec "$@"/i \
+            . "${CATKIN_WS}/devel/setup.bash"' /ros_entrypoint.sh

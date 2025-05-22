@@ -1,0 +1,22 @@
+# Dockerfile.dev
+FROM covins_base:latest
+
+ARG NR_JOBS="" # Allows passing --build-arg NR_JOBS=<num_jobs>
+
+ENV CATKIN_WS=/root/covins_ws
+
+WORKDIR $CATKIN_WS
+
+# Copy ONLY your covins application source code.
+# This assumes your local 'src/covins' directory contains the actual
+# covins_frontend and covins_backend packages, and any other
+# frequently changing code.
+COPY ./ $CATKIN_WS/src/covins
+
+# Source devel space to ensure environment is set up for catkin build
+# This is needed because each RUN command is a new shell.
+RUN /bin/bash -c ". devel/setup.bash"
+
+# Final catkin build for covins_frontend, covins_backend, and ORB_SLAM3 ROS node
+# These are the packages that are likely to change frequently during development.
+RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_frontend covins_backend ORB_SLAM3"

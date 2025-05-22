@@ -44,3 +44,10 @@ compile_commands.json
 # Vscode
 .cache/
 .vscode/
+
+.history
+datasets/
+# Images
+*.png
+*.jpg
+*.jpeg
