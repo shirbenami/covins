@@ -7,16 +7,55 @@ ENV CATKIN_WS=/root/covins_ws
 
 WORKDIR $CATKIN_WS
 
-# Copy ONLY your covins application source code.
-# This assumes your local 'src/covins' directory contains the actual
-# covins_frontend and covins_backend packages, and any other
-# frequently changing code.
-COPY ./ $CATKIN_WS/src/covins
+# --- IMPORTANT: All code related to your covins repository goes here ---
+# Copy your ENTIRE covins application source code.
+# This includes covins_comm, covins_frontend, covins_backend, and your ORB_SLAM3 fork/ROS wrapper.
+# This layer will be invalidated every time you change a file in your local src/covins/.
+COPY ./ $CATKIN_WS/src/covins/
 
-# Source devel space to ensure environment is set up for catkin build
-# This is needed because each RUN command is a new shell.
+# Source devel space to ensure environment is set up for subsequent builds
 RUN /bin/bash -c ". devel/setup.bash"
 
-# Final catkin build for covins_frontend, covins_backend, and ORB_SLAM3 ROS node
-# These are the packages that are likely to change frequently during development.
+# Build covins_comm first, as it's a dependency for other covins packages (like ORB_SLAM3)
+RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_comm"
+
+# Re-source devel space after building covins_comm to make it discoverable for subsequent steps
+RUN /bin/bash -c ". devel/setup.bash"
+
+# Build DBoW2 for covins_backend (part of your covins repo)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/covins_backend/thirdparty/DBoW2 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS}"
+
+# Build ORB_SLAM3 Thirdparty DBoW2 (part of your ORB_SLAM3 fork within covins)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3/Thirdparty/DBoW2 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS}"
+
+# Build ORB_SLAM3 Thirdparty g2o (part of your ORB_SLAM3 fork within covins)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3/Thirdparty/g2o && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS}"
+
+# Extract vocabularies (these are specific to covins_backend and ORB_SLAM3 within your repo)
+RUN /bin/bash -c "cd src/covins/covins_backend/config && \
+    [ -f ORBvoc.txt ] || unzip ORBvoc.txt.zip"
+RUN /bin/bash -c "cd src/covins/orb_slam3/Vocabulary && \
+    [ -f ORBvoc.txt ] || tar -xf ORBvoc.txt.tar.gz"
+
+# Build ORB_SLAM3 library (the non-ROS part of your ORB_SLAM3 fork within covins)
+RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
+    cd src/covins/orb_slam3 && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j${NR_JOBS}"
+
+# Finally, build your remaining ROS packages: covins_frontend, covins_backend, and the ORB_SLAM3 ROS node.
+# covins_comm is now built in an earlier step.
 RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_frontend covins_backend ORB_SLAM3"
