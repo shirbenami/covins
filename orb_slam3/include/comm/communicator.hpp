@@ -55,6 +55,13 @@ public:
         kf_out_buffer_.push_back(kf);
     }
 
+    // Add this override for ROS2 or custom logic
+    virtual auto PassDataBundle(covins::data_bundle &msg) -> void override;
+
+    
+    void SetRos2Node(std::shared_ptr<rclcpp::Node> node);
+    
+
 protected:
 
     // data handling
@@ -65,6 +72,11 @@ protected:
     virtual auto ProcessNewLandmarks()                                                  ->void;
 
     virtual auto ProcessKfBuffer()                                                      ->void;
+
+    // ROS2 Publisher
+    std::shared_ptr<rclcpp::Node> ros2_node_;
+    rclcpp::Publisher<covins_msgs::msg::DataBundle>::SharedPtr ros2_pub_;
+    
 
     // Infrastructure
     Atlas*                  map_                                                                = nullptr;  // the map is not necessary to send data to the server. However, we keep a ptr to it to facilitate implementing potetnial interaction
