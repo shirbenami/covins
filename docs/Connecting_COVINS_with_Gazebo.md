@@ -74,5 +74,30 @@ This is the launch file used for running ORB-SLAM3 inside the container.
 </launch>
 ```
 
+### 3. run.sh – ROS Client Section (ORB-SLAM3)
 
 
+This is the run.sh used to launch the ORB-SLAM3 container with the correct configurations and volume mounts.
+```
+elif [ $ROS_CLIENT -eq 1 ]; then
+    CONFIG_FILE_COMM=$(absPath ${*: -2:1})
+    LAUNCH_FILE=$(absPath ${*: -1})
+    docker run \
+    -it \
+    --net=host \
+    --volume "${CONFIG_FILE_COMM}:${CATKIN_WS}/src/covins/covins_comm/config/config_comm.yaml" \
+    --volume "${LAUNCH_FILE}:${CATKIN_WS}/src/covins/orb_slam3/Examples/ROS/ORB_SLAM3/launch/$(basename ${LAUNCH_FILE})" \
+    --volume "/home/user/ws/covins_ws/src/covins/orb_slam3/Examples/real_camera.yaml:${CATKIN_WS}/src/covins/orb_slam3/Examples/real_camera.yaml" \
+    covins \
+    /bin/bash
+```
+
+🔁 Additional Notes
+
+** The environment variable use_sim_time=true is essential to synchronize timestamps from Gazebo’s simulated clock (/clock).
+
+** The transformation Tbc was set to identity because in the simulation, the IMU and camera are assumed to be co-located. In real-world setups, the correct extrinsic calibration must be used.
+
+** --net=host is used for Docker containers to share the same network namespace. This is crucial for ROS topic sharing across containers.
+
+** ROS topics such as /camera/rgb/image_raw and /imu must be actively published and subscribed with matching message types and timestamps.
