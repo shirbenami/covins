@@ -94,10 +94,10 @@ elif [ $ROS_CLIENT -eq 1 ]; then
 
 🔁 Additional Notes
 
-** The environment variable use_sim_time=true is essential to synchronize timestamps from Gazebo’s simulated clock (/clock).
+* The environment variable use_sim_time=true is essential to synchronize timestamps from Gazebo’s simulated clock (/clock).
 
-** The transformation Tbc was set to identity because in the simulation, the IMU and camera are assumed to be co-located. In real-world setups, the correct extrinsic calibration must be used.
+* The transformation Tbc was set to identity because in the simulation, the IMU and camera are assumed to be co-located. In real-world setups, the correct extrinsic calibration must be used.
 
-** --net=host is used for Docker containers to share the same network namespace. This is crucial for ROS topic sharing across containers.
+* --net=host is used for Docker containers to share the same network namespace. This is crucial for ROS topic sharing across containers.
 
-** ROS topics such as /camera/rgb/image_raw and /imu must be actively published and subscribed with matching message types and timestamps.
+* ROS topics such as /camera/rgb/image_raw and /imu must be actively published and subscribed with matching message types and timestamps.
