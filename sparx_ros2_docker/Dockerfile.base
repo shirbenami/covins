@@ -1,0 +1,50 @@
+FROM osrf/ros:humble-desktop
+
+ENV ROS_WS=/root/covins_ws
+
+# Install build tools and ROS2 dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-colcon-common-extensions \
+    build-essential \
+    git \
+    vim \
+    sudo \
+    net-tools \
+    autoconf \
+    mesa-utils \
+    gedit \
+    gdb \
+    cgdb \
+    unzip \
+    cmake \
+    doxygen \
+    libgoogle-glog-dev \
+    libatlas-base-dev \
+    libsuitesparse-dev \
+    libyaml-cpp-dev \
+    libomp-dev \
+    libglew-dev \
+    libeigen3-dev \
+    ros-humble-geometry-msgs \
+    ros-humble-std-msgs \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV TERM=xterm
+ENV PYTHONIOENCODING=UTF-8
+
+WORKDIR $ROS_WS
+
+# Copy your ROS2 workspace into the container (adjust path as needed)
+COPY ./ $ROS_WS
+
+# Build Pangolin (if it was cloned into src/pangolin)
+RUN /bin/bash -c "cd src/pangolin && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j$(nproc)"
+
+# Build the ROS2 workspace
+RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build"
+
+# Source the workspace on container start
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /root/covins_ws/install/setup.bash && bash"]

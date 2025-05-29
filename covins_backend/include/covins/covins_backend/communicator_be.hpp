@@ -28,6 +28,7 @@
 #include <covins/covins_base/config_comm.hpp>
 #include <covins/covins_base/config_backend.hpp>
 
+
 namespace covins {
 
 class Map;
@@ -84,6 +85,11 @@ protected:
     // LM Culling
     LandmarkList                recent_landmarks_;
     KeyframeList                recent_keyframes_;
+
+    // ROS2
+    #ifdef COVINS_USE_ROS2_BRIDGE
+        std::shared_ptr<covins::CommRos2Bridge> ros2_bridge_;
+    #endif
 
 };
 

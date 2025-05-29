@@ -28,12 +28,6 @@
 // ORB-SLAM3
 #include "Atlas.h"
 
-// ROS2
-
-#include <rclcpp/rclcpp.hpp>
-#include <covins_msgs/msg/data_bundle.hpp>
-
-
 namespace ORB_SLAM3 {
 
 Communicator::Communicator(std::string server_ip, std::string port, Atlas* map)
@@ -56,24 +50,6 @@ Communicator::Communicator(std::string server_ip, std::string port, Atlas* map)
 auto Communicator::ProcessAdditional()->void {
 
 }
-
-auto Communicator::PassDataBundle(covins::data_bundle &msg) -> void {
-
-    if (ros2_pub_) {
-        auto ros_msg = covins::ToRosMsg(msg);
-        ros2_pub_->publish(ros_msg);
-        return;
-    }
-    #endif
-    covins::CommunicatorBase::PassDataBundle(msg);
-}
-
-
-void Communicator::SetRos2Node(std::shared_ptr<rclcpp::Node> node) {
-    ros2_node_ = node;
-    ros2_pub_ = ros2_node_->create_publisher<covins_msgs::msg::DataBundle>("covins_data_bundle", 10);
-}
-#endif
 
 auto Communicator::ProcessKfBuffer()->void {
     std::unique_lock<std::mutex>(mtx_kf_queue_);

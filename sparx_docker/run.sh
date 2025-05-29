@@ -201,6 +201,7 @@ else
         --env="XAUTHORITY=/run/user/1017/gdm/Xauthority" \
         --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
         --volume="/run/user/1017/gdm/Xauthority:/run/user/1017/gdm/Xauthority" \
+        --volume "/home/user1/GIT/TheAgency/covins_ws/src/covins:${CATKIN_WS}/src/covins" \
         covins_dev\
         /bin/bash
 fi

@@ -30,6 +30,11 @@
 #include "covins_backend/placerec_be.hpp"
 #include "covins_backend/visualization_be.hpp"
 
+// ROS2
+#ifdef COVINS_USE_ROS2_BRIDGE
+#include <comm_ros2/comm_ros2_bridge.hpp>
+#endif
+
 namespace covins {
 
 Communicator::Communicator(int client_id, int newfd, ManagerPtr man, VisPtr vis, PlacerecPtr placerec)
@@ -46,6 +51,10 @@ Communicator::Communicator(int client_id, int newfd, ManagerPtr man, VisPtr vis,
     while(out_container.msg_info.size() != ContainerSize*5)
         out_container.msg_info.push_back(0);
     SendMsgContainer(out_container);
+
+    #ifdef COVINS_USE_ROS2_BRIDGE
+        ros2_bridge_ = std::make_shared<covins::CommRos2Bridge>(ros2_node);
+    #endif
 }
 
 auto Communicator::CollectDataForAgent()->void {
@@ -66,6 +75,13 @@ auto Communicator::CollectDataForAgent()->void {
     kf_newest->ConvertToMsg(msg_kf,kf0,true);
     map_chunk.keyframes.push_back(msg_kf);
     this->PassDataBundle(map_chunk);
+
+    // ROS2 Bridge
+    #ifdef COVINS_USE_ROS2_BRIDGE
+    if (ros2_bridge_) {
+        ros2_bridge_->PublishDataBundle(map_chunk);
+    }
+    #endif
 }
 
 auto Communicator::LandmarkCulling(size_t min_obs, size_t max_gap)->int {
