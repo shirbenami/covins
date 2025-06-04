@@ -55,10 +55,97 @@ IMU.GyroWalk: 1.9393e-05
 IMU.AccWalk: 3.0e-03
 IMU.Frequency: 200
 ```
+
+and for real_camera_hector.yaml:
+
+```yaml
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+Camera.type: "PinHole"
+
+# Camera calibration and distortion parameters (OpenCV) 
+Camera.fx: 159.99941228826285
+Camera.fy: 159.99941228826285
+Camera.cx: 160.5
+Camera.cy: 120.5
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+
+# Camera resolution
+Camera.width: 320
+Camera.height: 240
+
+# Camera frames per second 
+Camera.fps: 10.0
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Transformation from camera to body-frame (imu)
+Tbc: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [1, 0, 0, 0,
+          0, 1, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1]
+
+# IMU noise
+IMU.NoiseGyro: 0.05
+IMU.NoiseAcc: 0.35
+IMU.GyroWalk: 0.015
+IMU.AccWalk: 0.02
+IMU.Frequency: 100
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 800 # 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize:2
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3
+Viewer.ViewpointX: 0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5 # -1.8
+Viewer.ViewpointF: 500
+
+
+```
+
 ### 2. launch_docker_ros_euroc_gazebo.launch
 
 This is the launch file used for running ORB-SLAM3 inside the container.
 
+for tutrlebot3:
 ```
 <launch>
   <param name="use_sim_time" value="true"/>
@@ -71,6 +158,26 @@ This is the launch file used for running ORB-SLAM3 inside the container.
     <remap from="/camera/image_raw" to="/camera/rgb/image_raw"/>
     <remap from="/imu" to="/imu"/>
   </node>
+</launch>
+```
+
+and for hector:
+```
+<?xml version="1.0"?>
+<launch>
+<param name="use_sim_time" value="true"/>
+
+<arg name="ag_n" default="0" />
+<arg name="voc" default="/root/covins_ws/src/covins/orb_slam3/Vocabulary/ORBvoc.txt" />
+<arg name="cam" default="/root/covins_ws/src/covins/orb_slam3/Examples/real_camera_hector.yaml" />
+
+<node pkg="ORB_SLAM3" type="Mono_Inertial" name="ORB_SLAM3_monoi$(arg ag_n)" args="$(arg voc) $(arg cam)" output="screen">
+
+    <remap from="/camera/image_raw" to="/front_cam/camera/image"/>
+    <remap from="/imu" to="/raw_imu"/>
+
+</node>
+
 </launch>
 ```
 
