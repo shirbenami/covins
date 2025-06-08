@@ -1,5 +1,5 @@
 # Dockerfile.dev
-FROM covins_base:latest
+FROM covins_base_abs_layer:latest
 
 ARG NR_JOBS="" # Allows passing --build-arg NR_JOBS=<num_jobs>
 
@@ -15,6 +15,8 @@ COPY ./ $CATKIN_WS/src/covins/
 
 # Source devel space to ensure environment is set up for subsequent builds
 RUN /bin/bash -c ". devel/setup.bash"
+RUN apt-get update && apt-get install -y \
+    libcereal-dev
 
 # Build covins_comm first, as it's a dependency for other covins packages (like ORB_SLAM3)
 RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_comm"

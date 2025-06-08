@@ -1,27 +1,36 @@
-
 #pragma once
 
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/image_encodings.h>
-#include <nav_msgs/Odometry.h>
-#include <cv_bridge/cv_bridge.h>
+// Removed ALL ROS1-specific includes for sensor input and message synchronization.
 
 #include <opencv2/core/core.hpp>
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
 #include <opencv2/features2d.hpp>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-
-#include "communicator.hpp"
 #include "ORBextractor.h"
 #include <covins/covins_base/config_comm.hpp>
+
+// NEW ABSTRACTION LAYER INCLUDES:
+#include <covins/comm_abstraction/ICommunicator.hpp>      // Defines the ICommunicator interface for sending/receiving data
+#include <covins/comm_abstraction/IMessage.hpp>           // Defines the IMessage base class
+#include <covins/comm_abstraction/CommunicatorFactory.hpp>// Factory to create ICommunicator instances (used in .cpp)
+#include <covins/comm_abstraction/ISerializer.hpp>      // For serialization/deserialization within IMessage
+
+// Standard library includes for buffering and synchronization
+#include <deque>    // For std::deque
+#include <mutex>    // For std::mutex
+#include <thread>   // For std::this_thread::sleep_for
+#include <chrono>   // For std::chrono::milliseconds
+
+// Forward declarations of concrete message types that will be handled by the buffers
+namespace covins {
+    class MsgImage;
+    class MsgOdometry;
+    class MsgKeyframe;
+}
+
 // ------------------
 
 namespace covins {
@@ -33,7 +42,6 @@ public:
   FrontendWrapper();
   ~FrontendWrapper(){};
 
-  // Main Loop
   auto run() -> void;
 
   bool ParseCamParamFile(cv::FileStorage &fSettings);
@@ -42,24 +50,21 @@ public:
   void convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img, TransformType T_wc,
                     TransformType T_wc_prev, int client_id, int index,
                     double ts);
-  
-  
+
   protected:
-    auto imageCallbackTF(const sensor_msgs::ImageConstPtr &msgImg,
-                         const nav_msgs::OdometryConstPtr &msgOdom) -> void;
+    // Generic callback for incoming messages from the abstraction layer.
+    auto genericMessageCallback(std::unique_ptr<IMessage> received_message) -> void;
 
-    ros::NodeHandle node_, nodeLocal_;
-    cv::Mat intrinsic_;
-    cv::Mat distCoeff_;
+    // NEW: Buffers for incoming messages to allow for approximate synchronization
+    std::deque<std::unique_ptr<MsgImage>> image_buffer_;
+    std::deque<std::unique_ptr<MsgOdometry>> odom_buffer_;
+    std::mutex buffer_mutex_; // Mutex to protect access to the buffers
+    double sync_tolerance_;   // Tolerance for approximate synchronization (e.g., 0.05 seconds)
 
-    message_filters::Synchronizer<
-        message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::Image, nav_msgs::Odometry>> *sync_;
+    // NEW: Private method to process messages from the buffers and perform synchronization
+    auto processSynchronizedMessages() -> void;
 
-    message_filters::Subscriber<sensor_msgs::Image> *subscriberImg_;
-    message_filters::Subscriber<nav_msgs::Odometry> *subscriberOdom_;
-    
-
+    // Remaining member variables (unchanged from previous version)
     Eigen::Vector3d prev_pos_;
     Eigen::Vector3d curr_pos_;
     Eigen::Quaterniond prev_quat_;
@@ -83,18 +88,16 @@ public:
     TransformType Tsc_;
     TransformType Twc_;
     TransformType Twc_prev_;
-    
+
     std::shared_ptr<covins::ORBextractor> orb_extractor_;
     std::shared_ptr<covins::ORBextractor> orb_extractor_PR_;
     cv::Ptr<cv::xfeatures2d::SIFT> sift_detector_;
     cv::Ptr<cv::ORB> orb_detector_;
 
-    // COVINS integration
     covins::TypeDefs::ThreadPtr thread_comm_;
-    std::shared_ptr<covins::Communicator> comm_;
+    std::shared_ptr<covins::ICommunicator> comm_;
     int client_id_;
-     
-    // ------------------
+
 };
 
 }

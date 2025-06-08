@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package covins.protobuf;
+
+// Defines a generic value that can hold one of several types
+message Value {
+  oneof type_value {
+    string string_val = 1;
+    int32 int_val = 2;
+    double double_val = 3;
+    bool bool_val = 4;
+    bytes binary_val = 5;
+  }
+
+  repeated double matrix4d_val = 6;
+  repeated double vector3d_val = 7;
+}
+
+// A buffer to hold multiple key-value entries
+message DataBuffer {
+  message Entry {
+    string key = 1;
+    Value value = 2;
+  }
+  repeated Entry entries = 1;
+}

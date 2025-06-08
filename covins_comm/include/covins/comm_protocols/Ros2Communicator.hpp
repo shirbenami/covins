@@ -1,0 +1,8 @@
+//
+// Created by user1 on 08/06/25.
+//
+
+#ifndef ROS2COMMUNICATOR_HPP
+#define ROS2COMMUNICATOR_HPP
+
+#endif //ROS2COMMUNICATOR_HPP

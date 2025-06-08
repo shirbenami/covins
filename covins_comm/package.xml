@@ -16,5 +16,17 @@
   <depend>opencv3_catkin</depend>
   <depend>glog_catkin</depend>
 
+  <!-- NEW DEPENDENCIES FOR COMMUNICATION ABSTRACTION -->
+  <build_depend>protobuf</build_depend>
+  <exec_depend>protobuf</exec_depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>roscpp</depend> <!-- Added for Ros1Communicator -->
+  <depend>image_transport</depend> <!-- Added for Ros1Communicator -->
+  <depend>cv_bridge</depend> <!-- Added for Ros1Communicator -->
+  <depend>message_filters</depend> <!-- Added for Ros1Communicator -->
+  <!-- End of NEW DEPENDENCIES -->
+
   <export></export>
 </package>
