@@ -410,6 +410,15 @@ auto FrontendWrapper::processSynchronizedMessages() -> void {
     }
 }
 
+void FrontendWrapper::sendKeyframeMessage(const MsgKeyframe& message) {
+    if (comm_ && comm_->isConnected()) {
+        if (!comm_->send(message)) {
+            std::cerr << COUTERROR << " Failed to send MsgKeyframe!" << std::endl;
+        }
+    } else {
+        std::cerr << COUTERROR << " Communicator not connected, cannot send MsgKeyframe." << std::endl;
+    }
+}
 
 // ParseCamParamFile and ParseORBParamFile remain largely unchanged,
 // but any ROS_INFO/ERROR calls inside them should be updated to std::cout/cerr.

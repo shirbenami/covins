@@ -26,6 +26,10 @@
   <depend>image_transport</depend> <!-- Added for Ros1Communicator -->
   <depend>cv_bridge</depend> <!-- Added for Ros1Communicator -->
   <depend>message_filters</depend> <!-- Added for Ros1Communicator -->
+  <build_depend>rospy</build_depend>
+  <exec_depend>rospy</exec_depend>
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>std_msgs</exec_depend>
   <!-- End of NEW DEPENDENCIES -->
 
   <export></export>

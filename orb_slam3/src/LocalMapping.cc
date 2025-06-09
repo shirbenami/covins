@@ -22,18 +22,26 @@
 #include "ORBmatcher.h"
 #include "Optimizer.h"
 #include "Converter.h"
-#include "Config.h"
+#include "Config.h" // Assuming this contains covins_params::comm::send_updates etc.
 
-#include<mutex>
-#include<chrono>
+#include <mutex>
+#include <chrono>
+#include <iostream> // For debug output like COUTERROR
 
+// COVINS includes for messages and utilities
+#include <covins/covins_base/config_comm.hpp> // For covins_params::comm
+#include <covins/comm_messages/MsgKeyframe.hpp> // For MsgKeyframe
+#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
 namespace ORB_SLAM3
 {
+
+const char* COUTERROR = "[ERROR]"; // Simple error tag for cout
 
 LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName):
     mpSystem(pSys), mbMonocular(bMonocular), mbInertial(bInertial), mbResetRequested(false), mbResetRequestedActiveMap(false), mbFinishRequested(false), mbFinished(true), mpAtlas(pAtlas), bInitializing(false),
     mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true),
-    mbNewInit(false), mIdxInit(0), mScale(1.0), mInitSect(0), mbNotBA1(true), mbNotBA2(true), infoInertial(Eigen::MatrixXd::Zero(9,9))
+    mbNewInit(false), mIdxInit(0), mScale(1.0), mInitSect(0), mbNotBA1(true), mbNotBA2(true), infoInertial(Eigen::MatrixXd::Zero(9,9)),
+    mClientId(-1) // Initialize mClientId
 {
     mnMatchesInliers = 0;
 
@@ -48,7 +56,6 @@ LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, 
     nLBA_exec = 0;
     nLBA_abort = 0;
 #endif
-
 }
 
 void LocalMapping::SetLoopCloser(LoopClosing* pLoopCloser)
@@ -61,9 +68,18 @@ void LocalMapping::SetTracker(Tracking *pTracker)
     mpTracker=pTracker;
 }
 
+// Implement the new SetFrontendWrapper method
+void LocalMapping::SetFrontendWrapper(std::shared_ptr<covins::FrontendWrapper> pFrontendWrapper) {
+    mpFrontendWrapper = pFrontendWrapper;
+    if (mpFrontendWrapper) {
+        mClientId = mpFrontendWrapper->getClientId(); // Get the client ID from FrontendWrapper
+        std::cout << "LocalMapping: Set FrontendWrapper, client ID: " << mClientId << std::endl;
+    }
+}
+
+
 void LocalMapping::Run()
 {
-
     mbFinished = false;
 
     while(1)
@@ -157,7 +173,7 @@ void LocalMapping::Run()
 #ifdef COVINS_MOD
                         vector<KeyFrame*> local_kfs;
                         Optimizer::LocalInertialBA(mpCurrentKeyFrame, &mbAbortBA, mpCurrentKeyFrame->GetMap(),local_kfs,num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA, bLarge, !mpCurrentKeyFrame->GetMap()->GetIniertialBA2());
-                        if(covins_params::comm::send_updates && this->IsCommInitialized()) {
+                        if(covins_params::comm::send_updates && mpFrontendWrapper && mpFrontendWrapper->getCommunicator() && mpFrontendWrapper->getCommunicator()->isConnected()) {
                             if(local_kfs.size() <= covins_params::comm::update_window_size) kf_out_buffer_.insert(local_kfs.begin(),local_kfs.end());
                             else kf_out_buffer_.insert(local_kfs.begin(),local_kfs.begin() + covins_params::comm::update_window_size);
                         }
@@ -171,7 +187,7 @@ void LocalMapping::Run()
 #ifdef COVINS_MOD
                         list<KeyFrame*> local_kfs;
                         Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpCurrentKeyFrame->GetMap(),num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA,local_kfs);
-                        if(covins_params::comm::send_updates && this->IsCommInitialized()) {
+                        if(covins_params::comm::send_updates && mpFrontendWrapper && mpFrontendWrapper->getCommunicator() && mpFrontendWrapper->getCommunicator()->isConnected()) {
                             if(local_kfs.size() <= covins_params::comm::update_window_size) kf_out_buffer_.insert(local_kfs.begin(),local_kfs.end());
                             else {
                                 int cntx=0;
@@ -302,21 +318,32 @@ void LocalMapping::Run()
 #ifdef COVINS_MOD
             //-----------------------------
             // This section takes care of sending data to the COVINS backend
-            if(!this->IsCommInitialized()) {
-                if(mbInertial) {
-                    if(mpAtlas->isImuInitialized() && mpAtlas->GetAllKeyFrames().size() >= covins_params::comm::start_sending_after_kf) {
-                        this->SetCommInitialized();
-                    }
-                } else {
-                    if(mpAtlas->GetAllKeyFrames().size() >= covins_params::comm::start_sending_after_kf) {
-                        this->SetCommInitialized();
-                    }
-                }
-            } else {
-                while(kf_out_buffer_.size() > covins_params::comm::kf_buffer_withold/* || this->CheckFinish()*/) { // delay sending a bit to achieve more consistency in data association
+            // Check if frontend wrapper and communicator are initialized and connected
+            if(covins_params::comm::send_updates && mpFrontendWrapper && mpFrontendWrapper->getCommunicator() && mpFrontendWrapper->getCommunicator()->isConnected())
+            {
+                // Delay sending a bit to achieve more consistency in data association
+                while(kf_out_buffer_.size() > covins_params::comm::kf_buffer_withold) {
                     KeyFrame* kfi = *(kf_out_buffer_.begin());
                     kf_out_buffer_.erase(kf_out_buffer_.begin());
-                    comm_->PassKfToComm(kfi);
+
+                    covins::MsgKeyframe msg_kf;
+                    // Determine the reference KeyFrame for ConvertToMsg.
+                    // This is typically the predecessor KF in the local mapping sequence.
+                    KeyFrame* kf_predecessor_for_msg = nullptr;
+                    if (kfi->mPrevKF && kfi->mPrevKF->mnId != kfi->mnId) { // Ensure it's a valid predecessor
+                        kf_predecessor_for_msg = kfi->mPrevKF;
+                    }
+
+                    // For the 'is_update' flag: A KF in kf_out_buffer_ can be new or updated by LBA.
+                    // If the KF was part of a local bundle adjustment (LBA), it's an update.
+                    // For now, assuming any KF being processed here might be an update.
+                    bool is_update_kf = true; // Conservative: assume it might be an update for now.
+
+                    // Populate MsgKeyframe from KeyFrame data
+                    kfi->ConvertToMsg(msg_kf, kf_predecessor_for_msg, is_update_kf, mClientId);
+
+                    // Send the populated message via FrontendWrapper
+                    mpFrontendWrapper->sendKeyframeMessage(msg_kf);
                 }
             }
             //-----------------------------
@@ -352,14 +379,26 @@ void LocalMapping::Run()
     }
 
 #ifdef COVINS_MOD
-    // empty comm buffer
-    std::cout << ">>> Empty comm buffer" << std::endl;
-    while(!kf_out_buffer_.empty()) {
-        KeyFrame* kfi = *(kf_out_buffer_.begin());
-        kf_out_buffer_.erase(kf_out_buffer_.begin());
-        comm_->PassKfToComm(kfi);
+    // empty comm buffer on shutdown
+    std::cout << ">>> LocalMapping: Emptying comm buffer on shutdown..." << std::endl;
+    if(mpFrontendWrapper && mpFrontendWrapper->getCommunicator() && mpFrontendWrapper->getCommunicator()->isConnected()) {
+        while(!kf_out_buffer_.empty()) {
+            KeyFrame* kfi = *(kf_out_buffer_.begin());
+            kf_out_buffer_.erase(kf_out_buffer_.begin());
+
+            covins::MsgKeyframe msg_kf;
+            KeyFrame* kf_predecessor_for_msg = nullptr;
+            if (kfi->mPrevKF && kfi->mPrevKF->mnId != kfi->mnId) {
+                kf_predecessor_for_msg = kfi->mPrevKF;
+            }
+            kfi->ConvertToMsg(msg_kf, kf_predecessor_for_msg, true, mClientId); // Treat as update on shutdown
+
+            mpFrontendWrapper->sendKeyframeMessage(msg_kf);
+        }
+    } else {
+        std::cout << ">>> LocalMapping: Communicator not connected, cannot empty buffer on shutdown." << std::endl;
     }
-    std::cout << ">>> Done." << std::endl;
+    std::cout << ">>> LocalMapping: Done emptying buffer." << std::endl;
 #endif
 
     SetFinish();
@@ -814,817 +853,3 @@ void LocalMapping::CreateNewMapPoints()
 
             // Triangulation is succesfull
             cv::Mat x3D_(x3D);
-            MapPoint* pMP = new MapPoint(x3D_,mpCurrentKeyFrame,mpAtlas->GetCurrentMap());
-
-            pMP->AddObservation(mpCurrentKeyFrame,idx1);            
-            pMP->AddObservation(pKF2,idx2);
-
-            mpCurrentKeyFrame->AddMapPoint(pMP,idx1);
-            pKF2->AddMapPoint(pMP,idx2);
-
-            pMP->ComputeDistinctiveDescriptors();
-
-            pMP->UpdateNormalAndDepth();
-
-            mpAtlas->AddMapPoint(pMP);
-            mlpRecentAddedMapPoints.push_back(pMP);
-        }
-    }
-}
-
-
-void LocalMapping::SearchInNeighbors()
-{
-    // Retrieve neighbor keyframes
-    int nn = 10;
-    if(mbMonocular)
-        nn=20;
-    const vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(nn);
-    vector<KeyFrame*> vpTargetKFs;
-    for(vector<KeyFrame*>::const_iterator vit=vpNeighKFs.begin(), vend=vpNeighKFs.end(); vit!=vend; vit++)
-    {
-        KeyFrame* pKFi = *vit;
-        if(pKFi->isBad() || pKFi->mnFuseTargetForKF == mpCurrentKeyFrame->mnId)
-            continue;
-        vpTargetKFs.push_back(pKFi);
-        pKFi->mnFuseTargetForKF = mpCurrentKeyFrame->mnId;
-    }
-
-    // Add some covisible of covisible
-    // Extend to some second neighbors if abort is not requested
-    for(int i=0, imax=vpTargetKFs.size(); i<imax; i++)
-    {
-        const vector<KeyFrame*> vpSecondNeighKFs = vpTargetKFs[i]->GetBestCovisibilityKeyFrames(20);
-        for(vector<KeyFrame*>::const_iterator vit2=vpSecondNeighKFs.begin(), vend2=vpSecondNeighKFs.end(); vit2!=vend2; vit2++)
-        {
-            KeyFrame* pKFi2 = *vit2;
-            if(pKFi2->isBad() || pKFi2->mnFuseTargetForKF==mpCurrentKeyFrame->mnId || pKFi2->mnId==mpCurrentKeyFrame->mnId)
-                continue;
-            vpTargetKFs.push_back(pKFi2);
-            pKFi2->mnFuseTargetForKF=mpCurrentKeyFrame->mnId;
-        }
-        if (mbAbortBA)
-            break;
-    }
-
-    // Extend to temporal neighbors
-    if(mbInertial)
-    {
-        KeyFrame* pKFi = mpCurrentKeyFrame->mPrevKF;
-        while(vpTargetKFs.size()<20 && pKFi)
-        {
-            if(pKFi->isBad() || pKFi->mnFuseTargetForKF==mpCurrentKeyFrame->mnId)
-            {
-                pKFi = pKFi->mPrevKF;
-                continue;
-            }
-            vpTargetKFs.push_back(pKFi);
-            pKFi->mnFuseTargetForKF=mpCurrentKeyFrame->mnId;
-            pKFi = pKFi->mPrevKF;
-        }
-    }
-
-    // Search matches by projection from current KF in target KFs
-    ORBmatcher matcher;
-    vector<MapPoint*> vpMapPointMatches = mpCurrentKeyFrame->GetMapPointMatches();
-    for(vector<KeyFrame*>::iterator vit=vpTargetKFs.begin(), vend=vpTargetKFs.end(); vit!=vend; vit++)
-    {
-        KeyFrame* pKFi = *vit;
-
-        matcher.Fuse(pKFi,vpMapPointMatches);
-        if(pKFi->NLeft != -1) matcher.Fuse(pKFi,vpMapPointMatches,true);
-    }
-
-    if (mbAbortBA)
-        return;
-
-    // Search matches by projection from target KFs in current KF
-    vector<MapPoint*> vpFuseCandidates;
-    vpFuseCandidates.reserve(vpTargetKFs.size()*vpMapPointMatches.size());
-
-    for(vector<KeyFrame*>::iterator vitKF=vpTargetKFs.begin(), vendKF=vpTargetKFs.end(); vitKF!=vendKF; vitKF++)
-    {
-        KeyFrame* pKFi = *vitKF;
-
-        vector<MapPoint*> vpMapPointsKFi = pKFi->GetMapPointMatches();
-
-        for(vector<MapPoint*>::iterator vitMP=vpMapPointsKFi.begin(), vendMP=vpMapPointsKFi.end(); vitMP!=vendMP; vitMP++)
-        {
-            MapPoint* pMP = *vitMP;
-            if(!pMP)
-                continue;
-            if(pMP->isBad() || pMP->mnFuseCandidateForKF == mpCurrentKeyFrame->mnId)
-                continue;
-            pMP->mnFuseCandidateForKF = mpCurrentKeyFrame->mnId;
-            vpFuseCandidates.push_back(pMP);
-        }
-    }
-
-    matcher.Fuse(mpCurrentKeyFrame,vpFuseCandidates);
-    if(mpCurrentKeyFrame->NLeft != -1) matcher.Fuse(mpCurrentKeyFrame,vpFuseCandidates,true);
-
-
-    // Update points
-    vpMapPointMatches = mpCurrentKeyFrame->GetMapPointMatches();
-    for(size_t i=0, iend=vpMapPointMatches.size(); i<iend; i++)
-    {
-        MapPoint* pMP=vpMapPointMatches[i];
-        if(pMP)
-        {
-            if(!pMP->isBad())
-            {
-                pMP->ComputeDistinctiveDescriptors();
-                pMP->UpdateNormalAndDepth();
-            }
-        }
-    }
-
-    // Update connections in covisibility graph
-    mpCurrentKeyFrame->UpdateConnections();
-}
-
-cv::Mat LocalMapping::ComputeF12(KeyFrame *&pKF1, KeyFrame *&pKF2)
-{
-    cv::Mat R1w = pKF1->GetRotation();
-    cv::Mat t1w = pKF1->GetTranslation();
-    cv::Mat R2w = pKF2->GetRotation();
-    cv::Mat t2w = pKF2->GetTranslation();
-
-    cv::Mat R12 = R1w*R2w.t();
-    cv::Mat t12 = -R1w*R2w.t()*t2w+t1w;
-
-    cv::Mat t12x = SkewSymmetricMatrix(t12);
-
-    const cv::Mat &K1 = pKF1->mpCamera->toK();
-    const cv::Mat &K2 = pKF2->mpCamera->toK();
-
-
-    return K1.t().inv()*t12x*R12*K2.inv();
-}
-
-cv::Matx33f LocalMapping::ComputeF12_(KeyFrame *&pKF1, KeyFrame *&pKF2)
-{
-    auto R1w = pKF1->GetRotation_();
-    auto t1w = pKF1->GetTranslation_();
-    auto R2w = pKF2->GetRotation_();
-    auto t2w = pKF2->GetTranslation_();
-
-    auto R12 = R1w*R2w.t();
-    auto t12 = -R1w*R2w.t()*t2w+t1w;
-
-    auto t12x = SkewSymmetricMatrix_(t12);
-
-    const auto &K1 = pKF1->mpCamera->toK_();
-    const auto &K2 = pKF2->mpCamera->toK_();
-
-
-    return K1.t().inv()*t12x*R12*K2.inv();
-}
-
-void LocalMapping::RequestStop()
-{
-    unique_lock<mutex> lock(mMutexStop);
-    mbStopRequested = true;
-    unique_lock<mutex> lock2(mMutexNewKFs);
-    mbAbortBA = true;
-}
-
-bool LocalMapping::Stop()
-{
-    unique_lock<mutex> lock(mMutexStop);
-    if(mbStopRequested && !mbNotStop)
-    {
-        mbStopped = true;
-        cout << "Local Mapping STOP" << endl;
-        return true;
-    }
-
-    return false;
-}
-
-bool LocalMapping::isStopped()
-{
-    unique_lock<mutex> lock(mMutexStop);
-    return mbStopped;
-}
-
-bool LocalMapping::stopRequested()
-{
-    unique_lock<mutex> lock(mMutexStop);
-    return mbStopRequested;
-}
-
-void LocalMapping::Release()
-{
-    unique_lock<mutex> lock(mMutexStop);
-    unique_lock<mutex> lock2(mMutexFinish);
-    if(mbFinished)
-        return;
-    mbStopped = false;
-    mbStopRequested = false;
-    for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
-        delete *lit;
-    mlNewKeyFrames.clear();
-
-    cout << "Local Mapping RELEASE" << endl;
-}
-
-bool LocalMapping::AcceptKeyFrames()
-{
-    unique_lock<mutex> lock(mMutexAccept);
-    return mbAcceptKeyFrames;
-}
-
-void LocalMapping::SetAcceptKeyFrames(bool flag)
-{
-    unique_lock<mutex> lock(mMutexAccept);
-    mbAcceptKeyFrames=flag;
-}
-
-bool LocalMapping::SetNotStop(bool flag)
-{
-    unique_lock<mutex> lock(mMutexStop);
-
-    if(flag && mbStopped)
-        return false;
-
-    mbNotStop = flag;
-
-    return true;
-}
-
-void LocalMapping::InterruptBA()
-{
-    mbAbortBA = true;
-}
-
-void LocalMapping::KeyFrameCulling()
-{
-    // Check redundant keyframes (only local keyframes)
-    // A keyframe is considered redundant if the 90% of the MapPoints it sees, are seen
-    // in at least other 3 keyframes (in the same or finer scale)
-    // We only consider close stereo points
-    const int Nd = 21; // This should be the same than that one from LIBA
-    mpCurrentKeyFrame->UpdateBestCovisibles();
-    vector<KeyFrame*> vpLocalKeyFrames = mpCurrentKeyFrame->GetVectorCovisibleKeyFrames();
-
-    float redundant_th;
-    if(!mbInertial)
-        redundant_th = 0.9;
-    else if (mbMonocular)
-        redundant_th = 0.9;
-    else
-        redundant_th = 0.5;
-
-    const bool bInitImu = mpAtlas->isImuInitialized();
-    int count=0;
-
-    // Compoute last KF from optimizable window:
-    unsigned int last_ID;
-    if (mbInertial)
-    {
-        int count = 0;
-        KeyFrame* aux_KF = mpCurrentKeyFrame;
-        while(count<Nd && aux_KF->mPrevKF)
-        {
-            aux_KF = aux_KF->mPrevKF;
-            count++;
-        }
-        last_ID = aux_KF->mnId;
-    }
-
-
-
-    for(vector<KeyFrame*>::iterator vit=vpLocalKeyFrames.begin(), vend=vpLocalKeyFrames.end(); vit!=vend; vit++)
-    {
-        count++;
-        KeyFrame* pKF = *vit;
-
-        if((pKF->mnId==pKF->GetMap()->GetInitKFid()) || pKF->isBad())
-            continue;
-        const vector<MapPoint*> vpMapPoints = pKF->GetMapPointMatches();
-
-        int nObs = 3;
-        const int thObs=nObs;
-        int nRedundantObservations=0;
-        int nMPs=0;
-        for(size_t i=0, iend=vpMapPoints.size(); i<iend; i++)
-        {
-            MapPoint* pMP = vpMapPoints[i];
-            if(pMP)
-            {
-                if(!pMP->isBad())
-                {
-                    if(!mbMonocular)
-                    {
-                        if(pKF->mvDepth[i]>pKF->mThDepth || pKF->mvDepth[i]<0)
-                            continue;
-                    }
-
-                    nMPs++;
-                    if(pMP->Observations()>thObs)
-                    {
-                        const int &scaleLevel = (pKF -> NLeft == -1) ? pKF->mvKeysUn[i].octave
-                                                                     : (i < pKF -> NLeft) ? pKF -> mvKeys[i].octave
-                                                                                          : pKF -> mvKeysRight[i].octave;
-                        const map<KeyFrame*, tuple<int,int>> observations = pMP->GetObservations();
-                        int nObs=0;
-                        for(map<KeyFrame*, tuple<int,int>>::const_iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
-                        {
-                            KeyFrame* pKFi = mit->first;
-                            if(pKFi==pKF)
-                                continue;
-                            tuple<int,int> indexes = mit->second;
-                            int leftIndex = get<0>(indexes), rightIndex = get<1>(indexes);
-                            int scaleLeveli = -1;
-                            if(pKFi -> NLeft == -1)
-                                scaleLeveli = pKFi->mvKeysUn[leftIndex].octave;
-                            else {
-                                if (leftIndex != -1) {
-                                    scaleLeveli = pKFi->mvKeys[leftIndex].octave;
-                                }
-                                if (rightIndex != -1) {
-                                    int rightLevel = pKFi->mvKeysRight[rightIndex - pKFi->NLeft].octave;
-                                    scaleLeveli = (scaleLeveli == -1 || scaleLeveli > rightLevel) ? rightLevel
-                                                                                                  : scaleLeveli;
-                                }
-                            }
-
-                            if(scaleLeveli<=scaleLevel+1)
-                            {
-                                nObs++;
-                                if(nObs>thObs)
-                                    break;
-                            }
-                        }
-                        if(nObs>thObs)
-                        {
-                            nRedundantObservations++;
-                        }
-                    }
-                }
-            }
-        }
-
-        if(nRedundantObservations>redundant_th*nMPs)
-        {
-            if (mbInertial)
-            {
-                if (mpAtlas->KeyFramesInMap()<=Nd)
-                    continue;
-
-                if(pKF->mnId>(mpCurrentKeyFrame->mnId-2))
-                    continue;
-
-                if(pKF->mPrevKF && pKF->mNextKF)
-                {
-                    const float t = pKF->mNextKF->mTimeStamp-pKF->mPrevKF->mTimeStamp;
-
-                    if((bInitImu && (pKF->mnId<last_ID) && t<3.) || (t<0.5))
-                    {
-                        pKF->mNextKF->mpImuPreintegrated->MergePrevious(pKF->mpImuPreintegrated);
-                        pKF->mNextKF->mPrevKF = pKF->mPrevKF;
-                        pKF->mPrevKF->mNextKF = pKF->mNextKF;
-                        pKF->mNextKF = NULL;
-                        pKF->mPrevKF = NULL;
-                        pKF->SetBadFlag();
-                    }
-                    else if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2() && (cv::norm(pKF->GetImuPosition()-pKF->mPrevKF->GetImuPosition())<0.02) && (t<3))
-                    {
-                        pKF->mNextKF->mpImuPreintegrated->MergePrevious(pKF->mpImuPreintegrated);
-                        pKF->mNextKF->mPrevKF = pKF->mPrevKF;
-                        pKF->mPrevKF->mNextKF = pKF->mNextKF;
-                        pKF->mNextKF = NULL;
-                        pKF->mPrevKF = NULL;
-                        pKF->SetBadFlag();
-                    }
-                }
-            }
-            else
-            {
-                pKF->SetBadFlag();
-            }
-        }
-        if((count > 20 && mbAbortBA) || count>100)
-        {
-            break;
-        }
-    }
-}
-
-
-cv::Mat LocalMapping::SkewSymmetricMatrix(const cv::Mat &v)
-{
-    return (cv::Mat_<float>(3,3) <<             0, -v.at<float>(2), v.at<float>(1),
-            v.at<float>(2),               0,-v.at<float>(0),
-            -v.at<float>(1),  v.at<float>(0),              0);
-}
-
-cv::Matx33f LocalMapping::SkewSymmetricMatrix_(const cv::Matx31f &v)
-{
-    cv::Matx33f skew{0.f, -v(2), v(1),
-                     v(2), 0.f, -v(0),
-                     -v(1), v(0), 0.f};
-
-    return skew;
-}
-
-void LocalMapping::RequestReset()
-{
-    {
-        unique_lock<mutex> lock(mMutexReset);
-        cout << "LM: Map reset recieved" << endl;
-        mbResetRequested = true;
-    }
-    cout << "LM: Map reset, waiting..." << endl;
-
-    while(1)
-    {
-        {
-            unique_lock<mutex> lock2(mMutexReset);
-            if(!mbResetRequested)
-                break;
-        }
-        usleep(3000);
-    }
-    cout << "LM: Map reset, Done!!!" << endl;
-}
-
-void LocalMapping::RequestResetActiveMap(Map* pMap)
-{
-    {
-        unique_lock<mutex> lock(mMutexReset);
-        cout << "LM: Active map reset recieved" << endl;
-        mbResetRequestedActiveMap = true;
-        mpMapToReset = pMap;
-    }
-    cout << "LM: Active map reset, waiting..." << endl;
-
-    while(1)
-    {
-        {
-            unique_lock<mutex> lock2(mMutexReset);
-            if(!mbResetRequestedActiveMap)
-                break;
-        }
-        usleep(3000);
-    }
-    cout << "LM: Active map reset, Done!!!" << endl;
-}
-
-void LocalMapping::ResetIfRequested()
-{
-    bool executed_reset = false;
-    {
-        unique_lock<mutex> lock(mMutexReset);
-        if(mbResetRequested)
-        {
-            executed_reset = true;
-
-            cout << "LM: Reseting Atlas in Local Mapping..." << endl;
-            mlNewKeyFrames.clear();
-            mlpRecentAddedMapPoints.clear();
-            mbResetRequested=false;
-            mbResetRequestedActiveMap = false;
-
-            // Inertial parameters
-            mTinit = 0.f;
-            mbNotBA2 = true;
-            mbNotBA1 = true;
-            mbBadImu=false;
-
-            mIdxInit=0;
-
-#ifdef COVINS_MOD
-            std::cout << "COVINS: reset kf_out_buffer_" << std::endl;
-            kf_out_buffer_.clear();
-#endif
-
-            cout << "LM: End reseting Local Mapping..." << endl;
-        }
-
-        if(mbResetRequestedActiveMap) {
-            executed_reset = true;
-            cout << "LM: Reseting current map in Local Mapping..." << endl;
-            mlNewKeyFrames.clear();
-            mlpRecentAddedMapPoints.clear();
-
-            // Inertial parameters
-            mTinit = 0.f;
-            mbNotBA2 = true;
-            mbNotBA1 = true;
-            mbBadImu=false;
-
-#ifdef COVINS_MOD
-            std::cout << "COVINS: reset kf_out_buffer_" << std::endl;
-            kf_out_buffer_.clear();
-#endif
-
-            mbResetRequestedActiveMap = false;
-            cout << "LM: End reseting Local Mapping..." << endl;
-        }
-    }
-    if(executed_reset)
-        cout << "LM: Reset free the mutex" << endl;
-
-}
-
-void LocalMapping::RequestFinish()
-{
-    unique_lock<mutex> lock(mMutexFinish);
-    mbFinishRequested = true;
-}
-
-bool LocalMapping::CheckFinish()
-{
-    unique_lock<mutex> lock(mMutexFinish);
-    return mbFinishRequested;
-}
-
-void LocalMapping::SetFinish()
-{
-    unique_lock<mutex> lock(mMutexFinish);
-    mbFinished = true;    
-    unique_lock<mutex> lock2(mMutexStop);
-    mbStopped = true;
-}
-
-bool LocalMapping::isFinished()
-{
-    unique_lock<mutex> lock(mMutexFinish);
-    return mbFinished;
-}
-
-void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
-{
-    std::cout << "[InitializeIMU] Called with priorG=" << priorG << ", priorA=" << priorA << ", bFIBA=" << bFIBA << std::endl;
-    if (mbResetRequested)
-    {
-        std::cout << "[InitializeIMU] Early return: mbResetRequested is true" << std::endl;
-        return;
-    }
-
-    float minTime;
-    int nMinKF;
-    if (mbMonocular)
-    {
-        minTime = 2.0;
-        nMinKF = 10;
-        std::cout << "[InitializeIMU] Monocular mode: minTime=" << minTime << ", nMinKF=" << nMinKF << std::endl;
-    }
-    else
-    {
-        minTime = 1.0;
-        nMinKF = 10;
-        std::cout << "[InitializeIMU] Non-monocular mode: minTime=" << minTime << ", nMinKF=" << nMinKF << std::endl;
-
-    }
-
-
-    if(mpAtlas->KeyFramesInMap()<nMinKF)
-    {
-        std::cout << "[InitializeIMU] mpAtlas->KeyFramesInMap() = " << mpAtlas->KeyFramesInMap() << std::endl;
-        std::cout << "[InitializeIMU] Early return: Not enough keyframes in map" << std::endl;
-        return;
-    }
-
-    // Retrieve all keyframe in temporal order
-    list<KeyFrame*> lpKF;
-    KeyFrame* pKF = mpCurrentKeyFrame;
-    while(pKF->mPrevKF)
-    {
-        lpKF.push_front(pKF);
-        pKF = pKF->mPrevKF;
-    }
-    lpKF.push_front(pKF);
-    vector<KeyFrame*> vpKF(lpKF.begin(),lpKF.end());
-
-    if(vpKF.size()<nMinKF)
-    {
-        std::cout << "[InitializeIMU] Early return: vpKF.size()=" << vpKF.size() << " < nMinKF=" << nMinKF << std::endl;
-        return;
-    }
-    mFirstTs=vpKF.front()->mTimeStamp;
-    if(mpCurrentKeyFrame->mTimeStamp-mFirstTs<minTime)
-        return;
-
-    bInitializing = true;
-
-    while(CheckNewKeyFrames())
-    {
-        std::cout << "[InitializeIMU] Processing new keyframe in queue." << std::endl;
-        ProcessNewKeyFrame();
-        vpKF.push_back(mpCurrentKeyFrame);
-        lpKF.push_back(mpCurrentKeyFrame);
-    }
-
-    const int N = vpKF.size();
-    IMU::Bias b(0,0,0,0,0,0);
-
-    // Compute and KF velocities mRwg estimation
-    if (!mpCurrentKeyFrame->GetMap()->isImuInitialized())
-    {
-        std::cout << "[InitializeIMU] IMU not initialized, estimating gravity direction and velocities." << std::endl;
-        cv::Mat cvRwg;
-        cv::Mat dirG = cv::Mat::zeros(3,1,CV_32F);
-        for(vector<KeyFrame*>::iterator itKF = vpKF.begin(); itKF!=vpKF.end(); itKF++)
-        {
-            if (!(*itKF)->mpImuPreintegrated)
-                continue;
-            if (!(*itKF)->mPrevKF)
-                continue;
-
-            dirG -= (*itKF)->mPrevKF->GetImuRotation()*(*itKF)->mpImuPreintegrated->GetUpdatedDeltaVelocity();
-            cv::Mat _vel = ((*itKF)->GetImuPosition() - (*itKF)->mPrevKF->GetImuPosition())/(*itKF)->mpImuPreintegrated->dT;
-            (*itKF)->SetVelocity(_vel);
-            (*itKF)->mPrevKF->SetVelocity(_vel);
-        }
-
-        dirG = dirG/cv::norm(dirG);
-        cv::Mat gI = (cv::Mat_<float>(3,1) << 0.0f, 0.0f, -1.0f);
-        cv::Mat v = gI.cross(dirG);
-        const float nv = cv::norm(v);
-        const float cosg = gI.dot(dirG);
-        const float ang = acos(cosg);
-        cv::Mat vzg = v*ang/nv;
-        cvRwg = IMU::ExpSO3(vzg);
-        mRwg = Converter::toMatrix3d(cvRwg);
-        mTinit = mpCurrentKeyFrame->mTimeStamp-mFirstTs;
-    }
-    else
-    {
-        std::cout << "[InitializeIMU] IMU already initialized, using existing biases." << std::endl;
-        mRwg = Eigen::Matrix3d::Identity();
-        mbg = Converter::toVector3d(mpCurrentKeyFrame->GetGyroBias());
-        mba = Converter::toVector3d(mpCurrentKeyFrame->GetAccBias());
-    }
-
-    mScale=1.0;
-
-    mInitTime = mpTracker->mLastFrame.mTimeStamp-vpKF.front()->mTimeStamp;
-
-    std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-    Optimizer::InertialOptimization(mpAtlas->GetCurrentMap(), mRwg, mScale, mbg, mba, mbMonocular, infoInertial, false, false, priorG, priorA);
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-
-    if (mScale<1e-1)
-    {
-        cout << "scale too small" << endl;
-        bInitializing=false;
-        return;
-    }
-
-
-
-    // Before this line we are not changing the map
-
-    unique_lock<mutex> lock(mpAtlas->GetCurrentMap()->mMutexMapUpdate);
-    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-    if ((fabs(mScale-1.f)>0.00001)||!mbMonocular)
-    {
-        mpAtlas->GetCurrentMap()->ApplyScaledRotation(Converter::toCvMat(mRwg).t(),mScale,true);
-        mpTracker->UpdateFrameIMU(mScale,vpKF[0]->GetImuBias(),mpCurrentKeyFrame);
-    }
-    std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-
-    // Check if initialization OK
-    if (!mpAtlas->isImuInitialized())
-        for(int i=0;i<N;i++)
-        {
-            KeyFrame* pKF2 = vpKF[i];
-            pKF2->bImu = true;
-        }
-
-    std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
-    if (bFIBA)
-    {
-        if (priorA!=0.f)
-            Optimizer::FullInertialBA(mpAtlas->GetCurrentMap(), 100, false, 0, NULL, true, priorG, priorA);
-        else
-            Optimizer::FullInertialBA(mpAtlas->GetCurrentMap(), 100, false, 0, NULL, false);
-    }
-
-    std::chrono::steady_clock::time_point t5 = std::chrono::steady_clock::now();
-
-    // If initialization is OK
-    mpTracker->UpdateFrameIMU(1.0,vpKF[0]->GetImuBias(),mpCurrentKeyFrame);
-    if (!mpAtlas->isImuInitialized())
-    {
-        cout << "IMU in Map " << mpAtlas->GetCurrentMap()->GetId() << " is initialized" << endl;
-        mpAtlas->SetImuInitialized();
-        mpTracker->t0IMU = mpTracker->mCurrentFrame.mTimeStamp;
-        mpCurrentKeyFrame->bImu = true;
-    }
-
-
-    mbNewInit=true;
-    mnKFs=vpKF.size();
-    mIdxInit++;
-
-    for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
-    {
-        (*lit)->SetBadFlag();
-        delete *lit;
-    }
-    mlNewKeyFrames.clear();
-
-    mpTracker->mState=Tracking::OK;
-    bInitializing = false;
-
-    mpCurrentKeyFrame->GetMap()->IncreaseChangeIndex();
-
-    return;
-}
-
-void LocalMapping::ScaleRefinement()
-{
-    // Minimum number of keyframes to compute a solution
-    // Minimum time (seconds) between first and last keyframe to compute a solution. Make the difference between monocular and stereo
-    // unique_lock<mutex> lock0(mMutexImuInit);
-    if (mbResetRequested)
-        return;
-
-    // Retrieve all keyframes in temporal order
-    list<KeyFrame*> lpKF;
-    KeyFrame* pKF = mpCurrentKeyFrame;
-    while(pKF->mPrevKF)
-    {
-        lpKF.push_front(pKF);
-        pKF = pKF->mPrevKF;
-    }
-    lpKF.push_front(pKF);
-    vector<KeyFrame*> vpKF(lpKF.begin(),lpKF.end());
-
-    while(CheckNewKeyFrames())
-    {
-        ProcessNewKeyFrame();
-        vpKF.push_back(mpCurrentKeyFrame);
-        lpKF.push_back(mpCurrentKeyFrame);
-    }
-
-    const int N = vpKF.size();
-
-    mRwg = Eigen::Matrix3d::Identity();
-    mScale=1.0;
-
-    std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-    Optimizer::InertialOptimization(mpAtlas->GetCurrentMap(), mRwg, mScale);
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-
-    if (mScale<1e-1)
-    {
-        cout << "scale too small" << endl;
-        bInitializing=false;
-        return;
-    }
-
-    // Before this line we are not changing the map
-    unique_lock<mutex> lock(mpAtlas->GetCurrentMap()->mMutexMapUpdate);
-    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-    if ((fabs(mScale-1.f)>0.00001)||!mbMonocular)
-    {
-        mpAtlas->GetCurrentMap()->ApplyScaledRotation(Converter::toCvMat(mRwg).t(),mScale,true);
-        mpTracker->UpdateFrameIMU(mScale,mpCurrentKeyFrame->GetImuBias(),mpCurrentKeyFrame);
-    }
-    std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
-
-    for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
-    {
-        (*lit)->SetBadFlag();
-        delete *lit;
-    }
-    mlNewKeyFrames.clear();
-
-    double t_inertial_only = std::chrono::duration_cast<std::chrono::duration<double> >(t1 - t0).count();
-
-    // To perform pose-inertial opt w.r.t. last keyframe
-    mpCurrentKeyFrame->GetMap()->IncreaseChangeIndex();
-
-    return;
-}
-
-
-
-bool LocalMapping::IsInitializing()
-{
-    return bInitializing;
-}
-
-
-double LocalMapping::GetCurrKFTime()
-{
-
-    if (mpCurrentKeyFrame)
-    {
-        return mpCurrentKeyFrame->mTimeStamp;
-    }
-    else
-        return 0.0;
-}
-
-KeyFrame* LocalMapping::GetCurrKF()
-{
-    return mpCurrentKeyFrame;
-}
-
-} //namespace ORB_SLAM

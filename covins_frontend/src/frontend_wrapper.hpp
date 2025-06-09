@@ -51,6 +51,11 @@ public:
                     TransformType T_wc_prev, int client_id, int index,
                     double ts);
 
+  // In the public section of FrontendWrapper class
+  void sendKeyframeMessage(const MsgKeyframe& message);
+  int getClientId() const { return client_id_; } // Add getter for client_id
+  std::shared_ptr<ICommunicator> getCommunicator() const { return comm_; } // Add getter for communicator
+
   protected:
     // Generic callback for incoming messages from the abstraction layer.
     auto genericMessageCallback(std::unique_ptr<IMessage> received_message) -> void;

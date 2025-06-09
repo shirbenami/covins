@@ -26,13 +26,15 @@
 
 #include<opencv2/core/core.hpp>
 #include<mutex>
+#include<memory> // For std::shared_ptr, if any are used in the future, good practice
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/map.hpp>
 
 // COVINS
-#include "comm/communicator.hpp"
+// #include "comm/communicator.hpp" // REMOVED: Old communication include
+#include <covins/comm_messages/MsgLandmark.hpp> // Keep this include for MsgLandmark
 
 namespace ORB_SLAM3
 {
@@ -75,7 +77,7 @@ public:
     void SetBadFlag();
     bool isBad();
 
-    void Replace(MapPoint* pMP);    
+    void Replace(MapPoint* pMP);
     MapPoint* GetReplaced();
 
     void IncreaseVisible(int n=1);
@@ -102,7 +104,7 @@ public:
 
     #ifdef COVINS_MOD
     bool sent_once_ = false;
-    virtual auto ConvertToMsg(covins::MsgLandmark &msg, KeyFrame* kf_ref, bool is_update, size_t cliend_id)->void;
+    virtual auto ConvertToMsg(covins::MsgLandmark &msg, KeyFrame* kf_ref, bool is_update, size_t client_id)->void; // Corrected client_id type
     #endif
 
 public:
@@ -132,7 +134,7 @@ public:
     // Variables used by loop closing
     long unsigned int mnLoopPointForKF;
     long unsigned int mnCorrectedByKF;
-    long unsigned int mnCorrectedReference;    
+    long unsigned int mnCorrectedReference;
     cv::Mat mPosGBA;
     long unsigned int mnBAGlobalForKF;
     long unsigned int mnBALocalForMerge;
@@ -152,7 +154,7 @@ public:
 
     unsigned int mnOriginMapId;
 
-protected:    
+protected:
 
      // Position in absolute coordinates
      cv::Mat mWorldPos;

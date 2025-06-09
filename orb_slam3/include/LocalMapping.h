@@ -28,9 +28,12 @@
 #include "Initializer.h"
 
 #include <mutex>
+#include <memory> // For std::shared_ptr
 
-// COVINS
-#include "comm/communicator.hpp"
+// COVINS New Communication Abstraction
+#ifdef COVINS_MOD
+#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+#endif
 
 namespace ORB_SLAM3
 {
@@ -127,18 +130,20 @@ public:
 #endif
 
     #ifdef COVINS_MOD
-    void SetComm(std::shared_ptr<Communicator> comm) {
-        comm_ = comm;
+    // Updated to FrontendWrapper
+    void SetFrontendWrapper(std::shared_ptr<covins::FrontendWrapper> pFrontendWrapper) {
+        mpFrontendWrapper = pFrontendWrapper;
     }
 
-    auto IsCommInitialized()->bool {
-        std::unique_lock<std::mutex> lock(mtx_comm_init_);
-        return comm_init_;
-    }
-    auto SetCommInitialized()->void {
-        std::unique_lock<std::mutex> lock(mtx_comm_init_);
-        comm_init_ = true;
-    }
+    // Removed IsCommInitialized and SetCommInitialized as FrontendWrapper manages this
+    // auto IsCommInitialized()->bool {
+    //     std::unique_lock<std::mutex> lock(mtx_comm_init_);
+    //     return comm_init_;
+    // }
+    // auto SetCommInitialized()->void {
+    //     std::unique_lock<std::mutex> lock(mtx_comm_init_);
+    //     comm_init_ = true;
+    // }
     #endif
 
 protected:
@@ -214,10 +219,12 @@ protected:
     ofstream f_lm;
 
     #ifdef COVINS_MOD
-    std::shared_ptr<Communicator> comm_;
+    // Updated to FrontendWrapper
+    std::shared_ptr<covins::FrontendWrapper> mpFrontendWrapper;
     std::set<KeyFrame*,KeyFrame::cmp_by_id> kf_out_buffer_;
-    std::mutex mtx_comm_init_;
-    bool comm_init_ = false;
+    // Removed mutex and bool for communication initialization status, as FrontendWrapper handles it.
+    // std::mutex mtx_comm_init_;
+    // bool comm_init_ = false;
     #endif
 };
 

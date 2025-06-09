@@ -1,10 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef TCPSOCKETCOMMUNICATOR_HPP
-#define TCPSOCKETCOMMUNICATOR_HPP
-
 #pragma once
 
 #include <string>
@@ -12,6 +5,7 @@
 #include <memory>   // For std::unique_ptr
 #include <functional> // For std::function
 #include <thread>   // For std::thread
+#include <atomic>   // For std::atomic
 #include <mutex>    // For std::mutex
 #include <queue>    // For internal message buffering
 
@@ -23,9 +17,9 @@
 #include <fcntl.h> // For non-blocking sockets
 
 // Core abstraction layer interfaces
-#include <covins/comm_abstraction/ICommunicator.hpp>
-#include <covins/comm_abstraction/IMessage.hpp>
-#include <covins/comm_abstraction/ISerializer.hpp> // For serializing/deserializing IMessage objects
+#include <covins/comm_abstraction/ICommunicator.hpp> // Changed to .hpp
+#include <covins/comm_abstraction/IMessage.hpp>     // Changed to .hpp
+#include <covins/comm_abstraction/ISerializer.hpp> // Changed to .hpp for serializing/deserializing IMessage objects
 
 namespace covins {
 
@@ -112,8 +106,9 @@ private:
 
     // Internal receive buffer for partial messages
     std::vector<uint8_t> recv_buffer_data_;
-    size_t current_msg_size_; // Expected size of the current message being received
-    bool expecting_message_size_; // True if we are waiting for the 4-byte size prefix
+    size_t current_msg_size_;           // Expected size of the current message being received
+    bool expecting_message_size_;       // True if we are waiting for the 4-byte size prefix
+
 
     // --- Serialization/Deserialization ---
     std::string serialization_format_; // Stores the chosen serialization format
@@ -123,12 +118,8 @@ private:
 
     // --- Private Helper Methods ---
     void receiveThreadLoop(); // The function executed by recv_thread_
-    bool sendBytes(const std::vector<uint8_t>& data); // Helper to send raw bytes
-    int receiveBytes(std::vector<uint8_t>& buffer, size_t num_bytes); // Helper to receive raw bytes
-    void processReceivedData(const std::vector<uint8_t>& new_data); // Processes incoming data stream
-    std::unique_ptr<IMessage> deserializeMessage(const std::vector<uint8_t>& data); // Helper to deserialize
+    bool readExactly(int socket_fd, uint8_t* buffer, size_t bytes_to_read); // Ensures all bytes are read
+    std::unique_ptr<IMessage> deserializeMessage(const std::string& message_type, const std::vector<uint8_t>& data); // Helper to deserialize
 };
 
 } // namespace covins
-
-#endif //TCPSOCKETCOMMUNICATOR_HPP

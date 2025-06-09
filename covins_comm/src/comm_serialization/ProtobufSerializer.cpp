@@ -186,19 +186,17 @@ std::vector<uint8_t> ProtobufSerializer::readBinary(const std::string& key) {
 Eigen::Matrix4d ProtobufSerializer::readTransform(const std::string& key) {
     const auto* entry = getEntry(key, deserialized_entries_);
     Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-    if (entry && entry->value().type_value_case() == covins::protobuf::Value::kMatrix4DVal) {
-        if (entry->value().matrix4d_val_size() == 16) {
-            int k = 0;
-            for (int i = 0; i < 4; ++i) {
-                for (int j = 0; j < 4; ++j) {
-                    transform(i, j) = entry->value().matrix4d_val(k++);
-                }
+    // Removed type_value_case check, directly check size for repeated field
+    if (entry && entry->value().matrix4d_val_size() == 16) {
+        int k = 0;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                transform(i, j) = entry->value().matrix4d_val(k++);
             }
-        } else {
-            std::cerr << "ERROR: ProtobufSerializer: Mismatch in matrix4d_val size for key '" << key << "'. Expected 16, got " << entry->value().matrix4d_val_size() << std::endl;
         }
     } else {
-        std::cerr << "ERROR: ProtobufSerializer: Expected matrix4d value for key '" << key << "' but found different type or no entry." << std::endl;
+        // If entry is null, or size is not 16, it's an error for a Matrix4d
+        std::cerr << "ERROR: ProtobufSerializer: Expected matrix4d value for key '" << key << "' but found different size or no entry." << std::endl;
     }
     return transform;
 }
@@ -206,16 +204,14 @@ Eigen::Matrix4d ProtobufSerializer::readTransform(const std::string& key) {
 Eigen::Vector3d ProtobufSerializer::readVector3d(const std::string& key) {
     const auto* entry = getEntry(key, deserialized_entries_);
     Eigen::Vector3d vector = Eigen::Vector3d::Zero();
-    if (entry && entry->value().type_value_case() == covins::protobuf::Value::kVector3DVal) {
-        if (entry->value().vector3d_val_size() == 3) {
-            for (int i = 0; i < 3; ++i) {
-                vector(i) = entry->value().vector3d_val(i);
-            }
-        } else {
-            std::cerr << "ERROR: ProtobufSerializer: Mismatch in vector3d_val size for key '" << key << "'. Expected 3, got " << entry->value().vector3d_val_size() << std::endl;
+    // Removed type_value_case check, directly check size for repeated field
+    if (entry && entry->value().vector3d_val_size() == 3) {
+        for (int i = 0; i < 3; ++i) {
+            vector(i) = entry->value().vector3d_val(i);
         }
     } else {
-        std::cerr << "ERROR: ProtobufSerializer: Expected vector3d value for key '" << key << "' but found different type or no entry." << std::endl;
+        // If entry is null, or size is not 3, it's an error for a Vector3d
+        std::cerr << "ERROR: ProtobufSerializer: Expected vector3d value for key '" << key << "' but found different size or no entry." << std::endl;
     }
     return vector;
 }

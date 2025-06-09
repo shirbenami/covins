@@ -1,10 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef ROS1COMMUNICATOR_HPP
-#define ROS1COMMUNICATOR_HPP
-
 #pragma once
 
 // ROS1 specific includes for communication
@@ -21,17 +14,19 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 // Core abstraction layer interfaces
-#include <covins/comm_abstraction/ICommunicator.hpp>
-#include <covins/comm_abstraction/IMessage.hpp> // For handling generic incoming/outgoing messages
-#include <covins/comm_abstraction/ISerializer.hpp> // For serializing IMessage objects to bytes
+#include <covins/comm_abstraction/ICommunicator.hpp> // Changed to .hpp
+#include <covins/comm_abstraction/IMessage.hpp>     // For handling generic incoming/outgoing messages, changed to .hpp
+#include <covins/comm_abstraction/ISerializer.hpp> // For serializing IMessage objects to bytes, changed to .hpp
 
 // OpenCV (for image processing within callbacks)
 #include <opencv2/core/core.hpp>
 
 // Other necessary standard library includes
 #include <string>
-#include <memory>
+#include <memory>   // For std::unique_ptr, std::make_unique
 #include <functional> // For std::function
+#include <thread>   // For std::thread
+#include <atomic>   // For std::atomic
 
 namespace covins {
 
@@ -40,6 +35,7 @@ namespace covins {
 class MsgImage;
 class MsgOdometry;
 class MsgKeyframe;
+class MsgLandmark; // Added if your system sends landmarks via ROS1
 
 /**
  * @brief Concrete implementation of ICommunicator for ROS1 communication.
@@ -140,9 +136,9 @@ private:
     std::function<void(std::unique_ptr<IMessage>)> receive_callback_;
 
     // Thread for ROS spinning if needed for non-blocking operation
-    std::unique_ptr<std::thread> ros_spin_thread_;
+    std::unique_ptr<std::thread> ros_spin_thread_; // Corrected declaration
     void rosSpinThreadLoop(); // The function to run in the spin thread
-    bool stop_ros_spin_thread_; // Flag to signal thread to stop
+    std::atomic<bool> stop_ros_spin_thread_; // Flag to signal thread to stop, corrected declaration
 
     // To store pending messages if receive() is called and callback is not set,
     // or if the internal processing of the callback needs buffering.
@@ -153,5 +149,3 @@ private:
 };
 
 } // namespace covins
-
-#endif //ROS1COMMUNICATOR_HPP

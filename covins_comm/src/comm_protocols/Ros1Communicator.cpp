@@ -1,11 +1,8 @@
-//
-// Created by user1 on 08/06/25.
-//
-#include <covins/comm_protocols/Ros1Communicator.hpp>
-#include <covins/comm_serialization/ProtobufSerializer.hpp> // Example: assuming Protobuf is used for internal IMessage serialization
-#include <covins/comm_messages/MsgImage.hpp>     // Concrete Image message type
-#include <covins/comm_messages/MsgOdometry.hpp>  // Concrete Odometry message type
-#include <covins/comm_messages/MsgKeyframe.hpp>  // Concrete Keyframe message type
+#include <covins/comm_protocols/Ros1Communicator.hpp> // Changed to .hpp
+#include <covins/comm_serialization/ProtobufSerializer.hpp> // Changed to .hpp // Example: assuming Protobuf is used for internal IMessage serialization
+#include <covins/comm_messages/MsgImage.hpp>     // Changed to .hpp // Concrete Image message type
+#include <covins/comm_messages/MsgOdometry.hpp>  // Changed to .hpp // Concrete Odometry message type
+#include <covins/comm_messages/MsgKeyframe.hpp>  // Changed to .hpp // Concrete Keyframe message type
 
 #include <iostream> // For standard output/error, replace with ROS_INFO/ERROR in actual code
 
@@ -13,7 +10,7 @@ namespace covins {
 
 Ros1Communicator::Ros1Communicator(const std::string& address, int port)
     : nh_("~"), it_(nh_), img_sub_(nullptr), odom_sub_(nullptr), sync_(nullptr),
-      stop_ros_spin_thread_(false) {
+      stop_ros_spin_thread_(false) { // Initialized atomic boolean
     // ROS_INFO("Ros1Communicator constructor called. Address: %s, Port: %d", address.c_str(), port);
     // Note: For a typical ROS client, the address/port are often set via ROS_MASTER_URI
     // environment variable or passed through launch files, not directly here.
@@ -41,12 +38,13 @@ bool Ros1Communicator::connect(const std::string& address, int port) {
 
     // Initialize publisher for outgoing keyframes
     keyframe_pub_ = nh_.advertise<sensor_msgs::Image>("/covins/keyframe", 10); // Placeholder for now.
-    // In a real scenario, you'd likely have a custom ROS message type for keyframes.
+    // In a real scenario, you'd likely have a custom ROS message type for CovinsKeyframe.
     // E.g., ros::Publisher keyframe_pub_ = nh_.advertise<covins_ros_msgs::KeyframeMsg>("/covins/keyframe", 10);
 
 
     // Start a separate thread to spin ROS callbacks
-    if (!ros_spin_thread_) {
+    if (!ros_spin_thread_) { // Check if unique_ptr is null
+        stop_ros_spin_thread_.store(false); // Ensure thread stop flag is reset
         ros_spin_thread_ = std::make_unique<std::thread>(&Ros1Communicator::rosSpinThreadLoop, this);
     }
 
@@ -55,8 +53,8 @@ bool Ros1Communicator::connect(const std::string& address, int port) {
 }
 
 bool Ros1Communicator::disconnect() {
-    stop_ros_spin_thread_ = true;
-    if (ros_spin_thread_ && ros_spin_thread_->joinable()) {
+    stop_ros_spin_thread_.store(true); // Signal thread to stop (atomic write)
+    if (ros_spin_thread_ && ros_spin_thread_->joinable()) { // Check if unique_ptr holds a thread and if it's joinable
         ros_spin_thread_->join();
     }
 
@@ -87,7 +85,7 @@ bool Ros1Communicator::send(const IMessage& message) {
         // Example: Convert keyframe_msg.image to ros_image_msg using cv_bridge
         try {
             cv_bridge::CvImage cv_img;
-            cv_img.header.stamp = ros::Time(keyframe_msg.timestamp_); // Assuming timestamp_ in MsgKeyframe
+            cv_img.header.stamp = ros::Time(keyframe_msg.timestamp); // Corrected: Used keyframe_msg.timestamp
             cv_img.header.frame_id = "camera_frame";
             cv_img.encoding = sensor_msgs::image_encodings::MONO8; // Or BGR8 etc.
             cv_img.image = keyframe_msg.getImage(); // Assuming MsgKeyframe has a getImage() that returns cv::Mat
@@ -174,7 +172,7 @@ void Ros1Communicator::synchronizedSensorCallback(const sensor_msgs::ImageConstP
 void Ros1Communicator::rosSpinThreadLoop() {
     // ROS_INFO("ROS spin thread started.");
     ros::Rate loop_rate(100); // Process callbacks at 100 Hz
-    while (ros::ok() && !stop_ros_spin_thread_) {
+    while (ros::ok() && !stop_ros_spin_thread_.load()) { // Use .load() for atomic read
         ros::spinOnce();
         loop_rate.sleep();
     }

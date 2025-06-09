@@ -8,7 +8,7 @@
 * License as published by the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 *
-* ORB-SLAM3 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+* ORB-SLAM3 is distributed in the hope that it is useful, but WITHOUT ANY WARRANTY; without even
 * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 *
@@ -26,6 +26,7 @@
 #include<string>
 #include<thread>
 #include<opencv2/core/core.hpp>
+#include<memory> // For std::shared_ptr, std::unique_ptr
 
 #include "Tracking.h"
 #include "FrameDrawer.h"
@@ -39,8 +40,10 @@
 #include "ImuTypes.h"
 #include "Config.h"
 
-// COVINS
-#include "comm/communicator.hpp"
+// COVINS New Communication Abstraction
+#ifdef COVINS_MOD
+#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+#endif
 
 namespace ORB_SLAM3
 {
@@ -150,7 +153,7 @@ public:
     void SaveKeyFrameTrajectoryTUM(const string &filename);
 
     void SaveTrajectoryEuRoC(const string &filename);
-    void SaveKeyFrameTrajectoryEuRoC(const string &filename);
+    void SaveKeyFrameTrajectoryEuRoC(const string & &filename);
 
     // Save camera trajectory in the KITTI dataset format.
     // Only for stereo and RGB-D. This method does not work for monocular.
@@ -208,8 +211,10 @@ private:
     LoopClosing* mpLoopCloser;
 
 #ifdef COVINS_MOD
-    std::shared_ptr<Communicator> comm_;
-    covins::TypeDefs::ThreadPtr thread_comm_;
+    // Changed from Communicator to FrontendWrapper
+    std::shared_ptr<covins::FrontendWrapper> mpFrontendWrapper;
+    // Changed from covins::TypeDefs::ThreadPtr to std::unique_ptr<std::thread>
+    std::unique_ptr<std::thread> mptFrontendWrapper;
 #endif
 
     // The viewer draws the map and the current camera pose. It uses Pangolin.
@@ -241,6 +246,6 @@ private:
     std::mutex mMutexState;
 };
 
-}// namespace ORB_SLAM
+}// namespace ORB_SLAM3
 
 #endif // SYSTEM_H

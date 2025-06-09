@@ -32,13 +32,16 @@
 #include "GeometricCamera.h"
 
 #include <mutex>
+#include <memory> // For std::shared_ptr, if any are used in the future, good practice
 
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
 
 // COVINS
-#include "comm/communicator.hpp"
+// #include "comm/communicator.hpp" // REMOVED: Old communication include
+#include <covins/comm_messages/MsgKeyframe.hpp> // Include for MsgKeyframe
+#include <covins/comm_messages/PreintegrationData.hpp> // Include for PreintegrationData
 
 namespace ORB_SLAM3
 {
@@ -267,7 +270,7 @@ public:
 
     bool sent_once_ = false;
     //Msg creation
-    auto ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame* kf_ref, bool is_update, size_t cliend_id)->void;
+    auto ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame* kf_ref, bool is_update, size_t client_id)->void;
     auto ConvertPreintegrationToMsg(covins::PreintegrationData &data)->void;
     #endif
 
@@ -358,7 +361,7 @@ protected:
     // Bad flags
     bool mbNotErase;
     bool mbToBeErased;
-    bool mbBad;    
+    bool mbBad;
 
     float mHalfBaseline; // Only for visualization
 

@@ -5,7 +5,6 @@
 #include <cstdint>   // For uint8_t
 #include <memory>    // For std::unique_ptr, std::make_unique
 #include <map>       // For std::map
-#include <iostream>  // For std::cerr, std::endl (though ideally only in .cpp)
 
 // Eigen includes for matrix/vector types
 #include <eigen3/Eigen/Dense>
@@ -18,12 +17,6 @@
 #include "data_buffer.pb.h"
 
 namespace covins {
-
-// Forward declaration of the helper function 'getEntry' if it's used outside the class
-// and defined in the .cpp file. If it's a static member of the serializer class,
-// then its declaration would be inside the class. For now, assuming it's a free function.
-// const covins::protobuf::DataBuffer_Entry* getEntry(const std::string& key,
-//                                                      const std::map<std::string, const covins::protobuf::DataBuffer_Entry*>& entries);
 
 /**
  * @brief Concrete implementation of ISerializer and IDeserializer using Google Protocol Buffers.
@@ -77,10 +70,14 @@ private:
     // Use the generated name for nested Entry type from Protobuf
     std::map<std::string, const covins::protobuf::DataBuffer_Entry*> deserialized_entries_;
 
-    // Helper to ensure data_buffer_pb_ is initialized
+    // Helper functions (declarations only)
     void ensureDataBufferInitialized();
-    // Helper to ensure deserialized_entries_ is populated after setData
     void populateDeserializedEntries();
 };
+
+// Declare the helper function 'getEntry' if it's a free function and used by the ProtobufSerializer.cpp
+// Note: It needs to be declared outside the class, but its definition will be in ProtobufSerializer.cpp
+const covins::protobuf::DataBuffer_Entry* getEntry(const std::string& key,
+                                                     const std::map<std::string, const covins::protobuf::DataBuffer_Entry*>& entries);
 
 } // namespace covins

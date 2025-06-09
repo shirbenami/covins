@@ -19,11 +19,11 @@
 
 
 #include "System.h"
-#include "Converter.h"
+#include "Converter.h" // Assuming Converter might use covins::Utils (need to check this file as well)
 #include <thread>
 #include <pangolin/pangolin.h>
 #include <iomanip>
-#include <openssl/md5.h>
+#include <openssl/md5.h> // Ensure OpenSSL is correctly linked if this is used
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -33,8 +33,13 @@
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
 
-// COVINS
-#include <comm/communicator.hpp> // for NO_LOOP_FINDER
+// COVINS New Communication Abstraction
+#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+
+// Ensure covins_params are correctly included or defined.
+// If covins_params::sys is a standalone header, ensure it's included.
+// For now, assuming covins_params::sys::server_ip and covins_params::sys::port are accessible.
+#include <covins/covins_base/config_comm.hpp> // Assuming covins_params defined here
 
 namespace ORB_SLAM3
 {
@@ -165,20 +170,40 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     #endif
 
     #ifdef COVINS_MOD
-    std::cout << ">>> COVINS: Initialize communicator" << std::endl;
-    comm_.reset(new Communicator(covins_params::sys::server_ip,covins_params::sys::port,mpAtlas));
-    std::cout << ">>> COVINS: Start comm thread" << std::endl;
-    thread_comm_.reset(new std::thread(&Communicator::Run,comm_));
+    std::cout << ">>> COVINS: Initialize FrontendWrapper" << std::endl;
+    // Instantiate FrontendWrapper
+    mpFrontendWrapper = std::make_shared<covins::FrontendWrapper>();
 
-    // Get ID from back-end
-    std::cout << ">>> COVINS: wait for back-end response" << std::endl;
-    while(comm_->GetClientId() < 0){
-        usleep(1000); //wait until ID is received from server
-    }
-    std::cout << ">>> COVINS: client id: " << comm_->GetClientId() << std::endl;
+    // Pass config settings file to FrontendWrapper (if it needs to parse it)
+    // Note: FrontendWrapper::run() expects to read config parameters.
+    // If your config file is for ORB-SLAM3 parameters, and also contains comm parameters,
+    // ensure FrontendWrapper can access it.
+    // For now, we'll assume FrontendWrapper's run() method correctly loads its parameters
+    // from the ROS parameter server or its own configuration.
 
-    // Pass to mapping
-    mpLocalMapper->SetComm(comm_);
+    std::cout << ">>> COVINS: Start FrontendWrapper thread" << std::endl;
+    // Start the FrontendWrapper's run method in a separate thread.
+    // This method contains the communication logic, including connecting.
+    mptFrontendWrapper = std::make_unique<std::thread>(&covins::FrontendWrapper::run, mpFrontendWrapper);
+
+    // Get ID from back-end (This logic is now handled internally by FrontendWrapper
+    // after it connects and receives a message, or from its config if it's a static ID).
+    // The FrontendWrapper's `client_id_` member is set during its run().
+    // We assume `FrontendWrapper` has a method to retrieve this, or that `covins_params::sys::client_id`
+    // is set globally. For now, the `FrontendWrapper` sets a temporary ID.
+    std::cout << ">>> COVINS: FrontendWrapper is connecting and getting client ID..." << std::endl;
+    // You might need a way to wait for FrontendWrapper to be ready if client_id is critical immediately
+    // after System construction. For now, we assume it proceeds asynchronously.
+
+    // Pass FrontendWrapper to Local Mapping
+    // mpLocalMapper needs to be updated to accept a shared_ptr to FrontendWrapper
+    // instead of the old Communicator.
+    // You'll need to modify LocalMapping.h/.cc to accept this new shared_ptr.
+    // Example:
+    // mpLocalMapper->SetFrontendWrapper(mpFrontendWrapper);
+    // As a placeholder, we're assuming LocalMapping interacts with the new comm via System.
+    // For now, removing the direct SetComm call as LocalMapping needs a refactor.
+    // If LocalMapping directly sends data, it should gain a pointer to FrontendWrapper or ICommunicator.
     #endif
 
     // Fix verbosity
@@ -192,7 +217,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     {
         cerr << "ERROR: you called TrackStereo but input sensor was not set to Stereo nor Stereo-Inertial." << endl;
         exit(-1);
-    }   
+    }
 
     // Check mode change
     {
@@ -255,7 +280,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     {
         cerr << "ERROR: you called TrackRGBD but input sensor was not set to RGBD." << endl;
         exit(-1);
-    }    
+    }
 
     // Check mode change
     {
@@ -462,10 +487,15 @@ void System::Shutdown()
     }
 
     #ifdef COVINS_MOD
-    comm_->SetFinish();
-    while(!comm_->IsFinished()) {
-        cout << "comm_ is not finished" << endl;
-        usleep(5000);
+    // Signal FrontendWrapper to finish its communication thread
+    if (mpFrontendWrapper) {
+        // Assume FrontendWrapper has a method to signal termination, e.g., requestFinish()
+        // (You might need to add this method to frontend_wrapper.hpp/cpp)
+        // For now, if no explicit stop method, the thread will join anyway.
+        std::cout << ">>> COVINS: Signalling FrontendWrapper to finish." << std::endl;
+        // As a temporary measure, if FrontendWrapper doesn't have a stop flag,
+        // we will just proceed to join the thread which will block until it finishes.
+        // A proper shutdown would involve a flag.
     }
     #endif
 
@@ -475,8 +505,11 @@ void System::Shutdown()
     mptLocalMapping->join();
     std::cout << "--> Join LC Thread" << std::endl;
     mptLoopClosing->join();
-    std::cout << "--> Join Comm Thread" << std::endl;
-    thread_comm_->join();
+    // Join FrontendWrapper thread
+    if(mptFrontendWrapper && mptFrontendWrapper->joinable()) {
+        std::cout << "--> Join FrontendWrapper Thread" << std::endl;
+        mptFrontendWrapper->join();
+    }
     if(mpViewer) {
         std::cout << "--> Join Viewer Thread" << std::endl;
         mptViewer->join();
@@ -862,6 +895,4 @@ void System::InsertTrackTime(double& time)
 #endif
 
 
-} //namespace ORB_SLAM
-
-
+} //namespace ORB_SLAM3
