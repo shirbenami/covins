@@ -34,7 +34,7 @@
 #include <boost/archive/xml_oarchive.hpp>
 
 // COVINS New Communication Abstraction
-#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+#include <src/covins/covins_frontend/src/frontend_wrapper.hpp> //
 
 // Ensure covins_params are correctly included or defined.
 // If covins_params::sys is a standalone header, ensure it's included.

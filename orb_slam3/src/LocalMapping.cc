@@ -31,7 +31,7 @@
 // COVINS includes for messages and utilities
 #include <covins/covins_base/config_comm.hpp> // For covins_params::comm
 #include <covins/comm_messages/MsgKeyframe.hpp> // For MsgKeyframe
-#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+#include <src/covins/covins_frontend/src/frontend_wrapper.hpp> //
 namespace ORB_SLAM3
 {
 

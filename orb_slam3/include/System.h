@@ -42,7 +42,7 @@
 
 // COVINS New Communication Abstraction
 #ifdef COVINS_MOD
-#include <covins/covins_frontend/src/frontend_wrapper.hpp> //
+#include <src/covins/covins_frontend/src/frontend_wrapper.hpp> //
 #endif
 
 namespace ORB_SLAM3

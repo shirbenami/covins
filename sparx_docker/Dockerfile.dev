@@ -51,6 +51,13 @@ RUN /bin/bash -c "cd src/covins/covins_backend/config && \
 RUN /bin/bash -c "cd src/covins/orb_slam3/Vocabulary && \
     [ -f ORBvoc.txt ] || tar -xf ORBvoc.txt.tar.gz"
 
+# First build covins_comm
+RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_comm"
+
+# Then build covins_frontend
+RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_frontend"
+
+
 # Build ORB_SLAM3 library (the non-ROS part of your ORB_SLAM3 fork within covins)
 RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic:${CMAKE_PREFIX_PATH}\" && \
     cd src/covins/orb_slam3 && \
@@ -58,6 +65,6 @@ RUN /bin/bash -c "export CMAKE_PREFIX_PATH=\"${CATKIN_WS}/devel:/opt/ros/melodic
     cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
     make -j${NR_JOBS}"
 
-# Finally, build your remaining ROS packages: covins_frontend, covins_backend, and the ORB_SLAM3 ROS node.
+# Finally, build your remaining ROS packages:  covins_backend, and the ORB_SLAM3 ROS node.
 # covins_comm is now built in an earlier step.
-RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_frontend covins_backend ORB_SLAM3"
+RUN /bin/bash -c "catkin build -j ${NR_JOBS} covins_backend ORB_SLAM3"
