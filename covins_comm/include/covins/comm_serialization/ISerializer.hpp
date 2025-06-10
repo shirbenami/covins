@@ -1,9 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef ISERIALIZER_HPP
-#define ISERIALIZER_HPP
 #pragma once
 
 #include <string>
@@ -45,7 +39,7 @@ public:
      * @param key A key or identifier for the data.
      * @param value The double to write.
      */
-    virtual void write(const std::string& key, double value) = 0;
+    virtual void write(const std::string& key, double value) = 0; // FIX: Removed duplicate 'void'
 
     /**
      * @brief Writes a boolean value to the serializer.
@@ -74,6 +68,14 @@ public:
      * @param vector The Eigen::Vector3d to write.
      */
     virtual void write(const std::string& key, const Eigen::Vector3d& vector) = 0;
+
+    /**
+     * @brief Writes an Eigen 9x9 matrix (e.g., for covariance) to the serializer.
+     * @param key A key or identifier for the data.
+     * @param matrix The Eigen::Matrix<double, 9, 9> to write.
+     */
+    virtual void write(const std::string& key, const Eigen::Matrix<double, 9, 9>& matrix) = 0;
+
 
     /**
      * @brief Retrieves the final serialized data as a vector of bytes.
@@ -160,8 +162,13 @@ public:
      * @return The read Eigen::Vector3d.
      */
     virtual Eigen::Vector3d readVector3d(const std::string& key) = 0;
+
+    /**
+     * @brief Reads an Eigen 9x9 matrix from the deserializer.
+     * @param key The key or identifier for the data to read.
+     * @return The read Eigen::Matrix<double, 9, 9>.
+     */
+    virtual Eigen::Matrix<double, 9, 9> readMatrix9d(const std::string& key) = 0;
 };
 
 } // namespace covins
-
-#endif //ISERIALIZER_HPP

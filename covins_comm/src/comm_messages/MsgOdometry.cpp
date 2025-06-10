@@ -1,16 +1,14 @@
-//
-// Created by user1 on 08/06/25.
-//
 #include <covins/comm_messages/MsgOdometry.hpp>
 #include <iostream> // For error/debug output
 
 namespace covins {
 
-    MsgOdometry::MsgOdometry()
-        : timestamp(0.0), transform(Eigen::Matrix4d::Identity())
-    {
-        // Default initializes transform to Identity
-    }
+    // Constructor definition removed as it's defined in the header.
+    // MsgOdometry::MsgOdometry()
+    //     : timestamp(0.0), transform(Eigen::Matrix4d::Identity())
+    // {
+    //     // Default initializes transform to Identity
+    // }
 
     std::unique_ptr<IMessage> MsgOdometry::clone() const {
         auto cloned_msg = std::make_unique<MsgOdometry>();
@@ -40,4 +38,3 @@ namespace covins {
     }
 
 } // namespace covins
-

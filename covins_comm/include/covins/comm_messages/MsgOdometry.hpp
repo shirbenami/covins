@@ -1,10 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef MSGODOMETRY_HPP
-#define MSGODOMETRY_HPP
-
 #pragma once
 
 #include <string>
@@ -17,7 +10,7 @@
 
 // Abstract message interface and serialization interfaces
 #include <covins/comm_abstraction/IMessage.hpp>
-#include <covins/comm_abstraction/ISerializer.hpp> // IDeserializer is in the same header
+#include <covins/comm_serialization/ISerializer.hpp> // IDeserializer is in the same header
 
 namespace covins {
 
@@ -36,9 +29,9 @@ public:
 
 public:
     /**
-     * @brief Default constructor.
+     * @brief Default constructor. Initializes base class with message type.
      */
-    MsgOdometry();
+    MsgOdometry() : IMessage("Odometry") {}
 
     /**
      * @brief Destructor.
@@ -51,7 +44,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Odometry"
      */
-    std::string getType() const override { return "Odometry"; }
+    std::string getType() const override { return message_type_; } // Now uses base class implementation
 
     /**
      * @brief Creates a deep copy of this MsgOdometry object.
@@ -79,5 +72,3 @@ public:
 };
 
 } // namespace covins
-
-#endif //MSGODOMETRY_HPP

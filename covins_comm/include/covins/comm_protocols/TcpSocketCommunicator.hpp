@@ -19,7 +19,7 @@
 // Core abstraction layer interfaces
 #include <covins/comm_abstraction/ICommunicator.hpp> // Changed to .hpp
 #include <covins/comm_abstraction/IMessage.hpp>     // Changed to .hpp
-#include <covins/comm_abstraction/ISerializer.hpp> // Changed to .hpp for serializing/deserializing IMessage objects
+#include <covins/comm_serialization/ISerializer.hpp> // Changed to .hpp for serializing/deserializing IMessage objects
 
 namespace covins {
 

@@ -1,9 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef MSGIMAGE_HPP
-#define MSGIMAGE_HPP
 #pragma once
 
 #include <string>
@@ -15,7 +9,7 @@
 
 // Abstract message interface and serialization interfaces
 #include <covins/comm_abstraction/IMessage.hpp>
-#include <covins/comm_abstraction/ISerializer.hpp> // IDeserializer is in the same header
+#include <covins/comm_serialization/ISerializer.hpp> // IDeserializer is in the same header
 
 namespace covins {
 
@@ -34,9 +28,9 @@ public:
 
 public:
     /**
-     * @brief Default constructor.
+     * @brief Default constructor. Initializes base class with message type.
      */
-    MsgImage();
+    MsgImage() : IMessage("Image") {}
 
     /**
      * @brief Destructor.
@@ -49,7 +43,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Image"
      */
-    std::string getType() const override { return "Image"; }
+    std::string getType() const override { return message_type_; } // Now uses base class implementation
 
     /**
      * @brief Creates a deep copy of this MsgImage object.
@@ -77,5 +71,3 @@ public:
 };
 
 } // namespace covins
-
-#endif //MSGIMAGE_HPP

@@ -16,7 +16,7 @@
 // Core abstraction layer interfaces
 #include <covins/comm_abstraction/ICommunicator.hpp> // Changed to .hpp
 #include <covins/comm_abstraction/IMessage.hpp>     // For handling generic incoming/outgoing messages, changed to .hpp
-#include <covins/comm_abstraction/ISerializer.hpp> // For serializing IMessage objects to bytes, changed to .hpp
+#include <covins/comm_serialization/ISerializer.hpp> // For serializing IMessage objects to bytes, changed to .hpp
 
 // OpenCV (for image processing within callbacks)
 #include <opencv2/core/core.hpp>

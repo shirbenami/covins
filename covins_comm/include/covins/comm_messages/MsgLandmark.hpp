@@ -13,8 +13,8 @@
 #include <eigen3/Eigen/Dense>
 
 // Abstract message interface and serialization interfaces
-#include <covins/comm_abstraction/IMessage.hpp> // Ensure .hpp extension
-#include <covins/comm_abstraction/ISerializer.hpp> // IDeserializer is in the same header, ensure .hpp
+#include <covins/comm_abstraction/IMessage.hpp> // Ensure .h extension is used
+#include <covins/comm_serialization/ISerializer.hpp> // IDeserializer is in the same header, ensure .h
 
 // Covins base types (assuming TypeDefs.h defines things like TypeDefs::Vector3Type)
 // Ensure this path is correct based on your 'covins_backend/include' structure
@@ -43,9 +43,9 @@ public:
 
 public:
     /**
-     * @brief Default constructor.
+     * @brief Default constructor. Initializes base class with message type.
      */
-    MsgLandmark();
+    MsgLandmark() : IMessage("Landmark") {}
 
     /**
      * @brief Destructor.
@@ -58,7 +58,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Landmark"
      */
-    std::string getType() const override { return "Landmark"; }
+    std::string getType() const override { return message_type_; } // Now uses base class implementation
 
     /**
      * @brief Creates a deep copy of this MsgLandmark object.

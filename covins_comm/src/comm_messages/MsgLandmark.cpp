@@ -1,14 +1,16 @@
 #include <covins/comm_messages/MsgLandmark.hpp>
 #include <iostream> // For error/debug output
+#include <cstring>  // For std::memcpy
 
 namespace covins {
 
-MsgLandmark::MsgLandmark()
-    : id({-1, -1}), timestamp(0.0), is_new(true),
-      position(TypeDefs::Vector3Type::Zero())
-{
-    descriptor = cv::Mat(); // Default initialize empty cv::Mat
-}
+// Constructor definition removed as it's defined in the header.
+// MsgLandmark::MsgLandmark()
+//     : id({-1, -1}), timestamp(0.0), is_new(true),
+//       position(TypeDefs::Vector3Type::Zero())
+// {
+//     descriptor = cv::Mat(); // Default initialize empty cv::Mat
+// }
 
 std::unique_ptr<IMessage> MsgLandmark::clone() const {
     auto cloned_msg = std::make_unique<MsgLandmark>();

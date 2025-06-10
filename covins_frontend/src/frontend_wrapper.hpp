@@ -16,7 +16,7 @@
 #include <covins/comm_abstraction/ICommunicator.hpp>      // Defines the ICommunicator interface for sending/receiving data
 #include <covins/comm_abstraction/IMessage.hpp>           // Defines the IMessage base class
 #include <covins/comm_abstraction/CommunicatorFactory.hpp>// Factory to create ICommunicator instances (used in .cpp)
-#include <covins/comm_abstraction/ISerializer.hpp>      // For serialization/deserialization within IMessage
+#include <covins/comm_serialization/ISerializer.hpp>      // For serialization/deserialization within IMessage
 
 // Standard library includes for buffering and synchronization
 #include <deque>    // For std::deque

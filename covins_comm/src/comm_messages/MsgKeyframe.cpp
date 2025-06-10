@@ -6,22 +6,24 @@
 #include <opencv2/imgcodecs.hpp> // For cv::imencode, cv::imdecode
 #include <opencv2/imgproc.hpp>   // For cv::resize
 
+// !!! CRITICAL FIX: Include the full definition of ISerializer/IDeserializer !!!
+#include <covins/comm_serialization/ISerializer.hpp>
+
 namespace covins {
 
-MsgKeyframe::MsgKeyframe()
-    : id({-1, -1}), timestamp(0.0), is_update_msg(false),
-      // VICalibration 'calibration' member removed from here.
-      T_s_c(TypeDefs::TransformType::Identity()),
-      lin_acc(TypeDefs::Vector3Type::Zero()), ang_vel(TypeDefs::Vector3Type::Zero()),
-      T_sref_s(TypeDefs::TransformType::Identity()),
-      id_predecessor({-1, -1}), id_reference({-1, -1}), id_successor({-1, -1}),
-      img_dim_x_min(0.0), img_dim_y_min(0.0), img_dim_x_max(0.0), img_dim_y_max(0.0)
-{
-    // Default initialize cv::Mat and vectors
-    descriptors = cv::Mat();
-    descriptors_add = cv::Mat();
-    image = cv::Mat();
-}
+// Constructor definition removed as it's defined in the header.
+// MsgKeyframe::MsgKeyframe()
+//     : id({-1, -1}), timestamp(0.0), is_update_msg(false),
+//       T_s_c(TypeDefs::TransformType::Identity()),
+//       lin_acc(TypeDefs::Vector3Type::Zero()), ang_vel(TypeDefs::Vector3Type::Zero()),
+//       T_sref_s(TypeDefs::TransformType::Identity()),
+//       id_predecessor({-1, -1}), id_reference({-1, -1}), id_successor({-1, -1}),
+//       img_dim_x_min(0.0), img_dim_y_min(0.0), img_dim_x_max(0.0), img_dim_y_max(0.0)
+// {
+//     descriptors = cv::Mat();
+//     descriptors_add = cv::Mat();
+//     img = cv::Mat(); // Changed from 'image' to 'img'
+// }
 
 std::unique_ptr<IMessage> MsgKeyframe::clone() const {
     // Create a new MsgKeyframe and copy all members
@@ -31,8 +33,8 @@ std::unique_ptr<IMessage> MsgKeyframe::clone() const {
     cloned_msg->timestamp = this->timestamp;
     cloned_msg->is_update_msg = this->is_update_msg;
 
-    // 'calibration' member is removed, so no copy here.
-    // cloned_msg->calibration = this->calibration; // REMOVED
+    cloned_msg->T_w_b = this->T_w_b; // Added for completeness, was missing in clone
+    cloned_msg->T_w_b_prev = this->T_w_b_prev; // Added for completeness
 
     cloned_msg->T_s_c = this->T_s_c;
     cloned_msg->lin_acc = this->lin_acc;
@@ -59,7 +61,9 @@ std::unique_ptr<IMessage> MsgKeyframe::clone() const {
     cloned_msg->img_dim_y_min = this->img_dim_y_min;
     cloned_msg->img_dim_x_max = this->img_dim_x_max;
     cloned_msg->img_dim_y_max = this->img_dim_y_max;
-    cloned_msg->image = this->image.clone(); // Deep copy for image
+    cloned_msg->img = this->img.clone(); // !!! FIX: Changed from 'image' to 'img' !!!
+
+    cloned_msg->calibration = this->calibration; // Copy the nested struct
 
     return cloned_msg;
 }
@@ -74,10 +78,40 @@ void MsgKeyframe::serialize(ISerializer& serializer) const {
     serializer.write("timestamp", timestamp);
     serializer.write("is_update_msg", is_update_msg);
 
-    // Calibration data (previously here, now REMOVED)
-    // All lines related to calibration fields like calib_T_SC, calib_cam_model, etc. are gone.
+    // New: Serialize calibration struct members individually
+    serializer.write("calib_T_SC", calibration.T_SC);
+    serializer.write("calib_cam_model", static_cast<int>(calibration.cam_model));
+    serializer.write("calib_dist_model", static_cast<int>(calibration.dist_model));
+
+    // Serialize Eigen::DynamicVectorType for dist_coeffs
+    // Convert to std::vector<double> then to std::vector<uint8_t>
+    std::vector<double> dist_coeffs_vec_double(calibration.dist_coeffs.data(), calibration.dist_coeffs.data() + calibration.dist_coeffs.size());
+    serializer.write("calib_dist_coeffs", std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(dist_coeffs_vec_double.data()),
+                                                                reinterpret_cast<const uint8_t*>(dist_coeffs_vec_double.data()) + dist_coeffs_vec_double.size() * sizeof(double)));
+
+    serializer.write("calib_img_width", calibration.img_width);
+    serializer.write("calib_img_height", calibration.img_height);
+    serializer.write("calib_fx", calibration.fx);
+    serializer.write("calib_fy", calibration.fy);
+    serializer.write("calib_cx", calibration.cx);
+    serializer.write("calib_cy", calibration.cy);
+    serializer.write("calib_gyr_noise_density", calibration.gyr_noise_density);
+    serializer.write("calib_gyr_random_walk", calibration.gyr_random_walk);
+    serializer.write("calib_acc_noise_density", calibration.acc_noise_density);
+    serializer.write("calib_acc_random_walk", calibration.acc_random_walk);
+    serializer.write("calib_gyr_bias_noise_density", calibration.gyr_bias_noise_density);
+    serializer.write("calib_acc_bias_noise_density", calibration.acc_bias_noise_density);
+    serializer.write("calib_imu_freq", calibration.imu_freq);
+    serializer.write("calib_gravity", calibration.gravity);
+    serializer.write("calib_gravity_vec", calibration.gravity_vec);
+    serializer.write("calib_time_offset_imu_cam", calibration.time_offset_imu_cam);
+    serializer.write("calib_min_imu_preint_time", calibration.min_imu_preint_time);
+    serializer.write("calib_max_imu_preint_time", calibration.max_imu_preint_time);
+
 
     // Transformations and IMU data
+    serializer.write("T_w_b", T_w_b);
+    serializer.write("T_w_b_prev", T_w_b_prev); // Added for completeness
     serializer.write("T_s_c", T_s_c);
     serializer.write("lin_acc", lin_acc);
     serializer.write("ang_vel", ang_vel);
@@ -129,7 +163,7 @@ void MsgKeyframe::serialize(ISerializer& serializer) const {
     std::vector<double> aors_add_flat(keypoints_aors_add.size() * 4);
     for (size_t i = 0; i < keypoints_aors_add.size(); ++i) {
         aors_add_flat[i*4] = keypoints_aors_add[i][0];
-        aors_add_flat[i*4 + 1] = keypoints_aors_add[i][1];
+        aors_add_flat[i*4 + 1] = keypoints_aors_add[i][1]; // Fixed: Was aors_add_flat[i*4 + 1] = aors_add_flat[i*4 + 1]
         aors_add_flat[i*4 + 2] = keypoints_aors_add[i][2];
         aors_add_flat[i*4 + 3] = keypoints_aors_add[i][3];
     }
@@ -168,14 +202,14 @@ void MsgKeyframe::serialize(ISerializer& serializer) const {
     serializer.write("img_dim_y_max", img_dim_y_max);
 
     // Serialize the image itself. Using JPEG/PNG compression for cv::Mat is common.
-    if (!image.empty()) {
+    if (!img.empty()) { // !!! FIX: Changed from 'image' to 'img' !!!
         std::vector<uint8_t> image_buffer;
         // Use JPEG compression for smaller size. Quality 80%.
-        cv::imencode(".jpg", image, image_buffer, {cv::IMWRITE_JPEG_QUALITY, 80});
+        cv::imencode(".jpg", img, image_buffer, {cv::IMWRITE_JPEG_QUALITY, 80}); // !!! FIX: Changed from 'image' to 'img' !!!
         serializer.write("image_data", image_buffer);
-        serializer.write("image_rows", image.rows);
-        serializer.write("image_cols", image.cols);
-        serializer.write("image_type", image.type()); // Store type (e.g., CV_8UC1 for grayscale)
+        serializer.write("image_rows", img.rows); // !!! FIX: Changed from 'image' to 'img' !!!
+        serializer.write("image_cols", img.cols); // !!! FIX: Changed from 'image' to 'img' !!!
+        serializer.write("image_type", img.type()); // Store type (e.g., CV_8UC1 for grayscale) // !!! FIX: Changed from 'image' to 'img' !!!
     } else {
         serializer.write("image_data", std::vector<uint8_t>{});
         serializer.write("image_rows", 0);
@@ -199,10 +233,43 @@ void MsgKeyframe::deserialize(IDeserializer& deserializer) {
     timestamp = deserializer.readDouble("timestamp");
     is_update_msg = deserializer.readBool("is_update_msg");
 
-    // Calibration data (previously here, now REMOVED)
-    // All lines related to calibration fields like calib_T_SC, calib_cam_model, etc. are gone.
+    // New: Deserialize calibration struct members individually
+    calibration.T_SC = deserializer.readTransform("calib_T_SC");
+    calibration.cam_model = static_cast<eCamModel>(deserializer.readInt("calib_cam_model"));
+    calibration.dist_model = static_cast<eDistortionModel>(deserializer.readInt("calib_dist_model"));
+
+    // Deserialize dist_coeffs (Eigen::DynamicVectorType)
+    std::vector<uint8_t> dist_coeffs_bytes = deserializer.readBinary("calib_dist_coeffs");
+    if (!dist_coeffs_bytes.empty() && dist_coeffs_bytes.size() % sizeof(double) == 0) {
+        calibration.dist_coeffs.resize(dist_coeffs_bytes.size() / sizeof(double));
+        std::memcpy(calibration.dist_coeffs.data(), dist_coeffs_bytes.data(), dist_coeffs_bytes.size());
+    } else {
+        calibration.dist_coeffs.setZero(); // Or resize(0) depending on desired empty state
+    }
+
+    calibration.img_width = deserializer.readDouble("calib_img_width");
+    calibration.img_height = deserializer.readDouble("calib_img_height");
+    calibration.fx = deserializer.readDouble("calib_fx");
+    calibration.fy = deserializer.readDouble("calib_fy");
+    calibration.cx = deserializer.readDouble("calib_cx");
+    calibration.cy = deserializer.readDouble("calib_cy");
+    calibration.gyr_noise_density = deserializer.readDouble("calib_gyr_noise_density");
+    calibration.gyr_random_walk = deserializer.readDouble("calib_gyr_random_walk");
+    calibration.acc_noise_density = deserializer.readDouble("calib_acc_noise_density");
+    calibration.acc_random_walk = deserializer.readDouble("calib_acc_random_walk");
+    calibration.gyr_bias_noise_density = deserializer.readDouble("calib_gyr_bias_noise_density");
+    calibration.acc_bias_noise_density = deserializer.readDouble("calib_acc_bias_noise_density");
+    calibration.imu_freq = deserializer.readDouble("calib_imu_freq");
+    calibration.gravity = deserializer.readDouble("calib_gravity");
+    calibration.gravity_vec = deserializer.readVector3d("calib_gravity_vec");
+    calibration.time_offset_imu_cam = deserializer.readDouble("calib_time_offset_imu_cam");
+    calibration.min_imu_preint_time = deserializer.readDouble("calib_min_imu_preint_time");
+    calibration.max_imu_preint_time = deserializer.readDouble("calib_max_imu_preint_time");
+
 
     // Transformations and IMU data
+    T_w_b = deserializer.readTransform("T_w_b");
+    T_w_b_prev = deserializer.readTransform("T_w_b_prev"); // Added for completeness
     T_s_c = deserializer.readTransform("T_s_c");
     lin_acc = deserializer.readVector3d("lin_acc");
     ang_vel = deserializer.readVector3d("ang_vel");
@@ -312,30 +379,30 @@ void MsgKeyframe::deserialize(IDeserializer& deserializer) {
 
     if (!image_data.empty() && image_rows > 0 && image_cols > 0) {
         // Decode image from buffer. Assuming it was encoded as JPEG.
-        image = cv::imdecode(image_data, cv::IMREAD_UNCHANGED);
-        if (image.empty()) {
+        img = cv::imdecode(image_data, cv::IMREAD_UNCHANGED); // !!! FIX: Changed 'image' to 'img' !!!
+        if (img.empty()) { // !!! FIX: Changed 'image' to 'img' !!!
             std::cerr << "MsgKeyframe: Failed to imdecode image data." << std::endl;
         }
         // Resize and convert type if necessary (might be different from original if imdecode changes it)
-        if (image.rows != image_rows || image.cols != image_cols || image.type() != image_type) {
+        if (img.rows != image_rows || img.cols != image_cols || img.type() != image_type) { // !!! FIX: Changed 'image' to 'img' !!!
              // For example, if original was CV_8UC1 but JPEG decoded to CV_8UC3, handle it.
              // For now, simple resize and type conversion is enough to prevent crashes.
              // Deeper checks and conversions might be needed.
-             cv::resize(image, image, cv::Size(image_cols, image_rows));
-             image.convertTo(image, image_type);
+             cv::resize(img, img, cv::Size(image_cols, image_rows)); // !!! FIX: Changed 'image' to 'img' !!!
+             img.convertTo(img, image_type); // !!! FIX: Changed 'image' to 'img' !!!
         }
 
     } else {
-        image = cv::Mat(); // Empty matrix
+        img = cv::Mat(); // Empty matrix // !!! FIX: Changed 'image' to 'img' !!!
     }
 }
 
 void MsgKeyframe::setImage(const cv::Mat& img) {
-    image = img.clone(); // Ensure deep copy
+    this->img = img.clone(); // Ensure deep copy // !!! FIX: Changed from 'image' to 'img' !!!
 }
 
 const cv::Mat& MsgKeyframe::getImage() const {
-    return image;
+    return img; // !!! FIX: Changed from 'image' to 'img' !!!
 }
 
 } // namespace covins

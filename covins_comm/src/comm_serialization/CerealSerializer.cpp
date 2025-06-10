@@ -1,6 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
 #include <covins/comm_serialization/CerealSerializer.hpp>
 #include <iostream> // For error reporting
 
@@ -91,6 +88,11 @@ void CerealSerializer::write(const std::string& key, const Eigen::Vector3d& vect
     save(*oarchive_, vector);
 }
 
+void CerealSerializer::write(const std::string& key, const Eigen::Matrix<double, 9, 9>& matrix) { // !!! NEW !!!
+    if (!oarchive_) { std::cerr << "CerealSerializer: Output archive not initialized." << std::endl; return; }
+    save(*oarchive_, matrix);
+}
+
 std::vector<uint8_t> CerealSerializer::getSerializedData() const {
     // Access the underlying stringstream's buffer
     const std::string& str = os_.str();
@@ -170,6 +172,13 @@ Eigen::Vector3d CerealSerializer::readVector3d(const std::string& key) {
     Eigen::Vector3d vector;
     load(*iarchive_, vector);
     return vector;
+}
+
+Eigen::Matrix<double, 9, 9> CerealSerializer::readMatrix9d(const std::string& key) { // !!! NEW !!!
+    if (!iarchive_) { std::cerr << "CerealSerializer: Input archive not initialized." << std::endl; return Eigen::Matrix<double, 9, 9>::Identity(); }
+    Eigen::Matrix<double, 9, 9> matrix;
+    load(*iarchive_, matrix);
+    return matrix;
 }
 
 } // namespace covins

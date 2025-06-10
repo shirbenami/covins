@@ -4,17 +4,27 @@
 #include <typeinfo> // For dynamic_cast type checking (though getType() is preferred)
 #include <cmath>    // For std::abs
 
+// Include ROS for ros::param::get
+#include <ros/ros.h>
+
 // NEW ABSTRACTION LAYER INCLUDES
 #include <covins/comm_abstraction/CommunicatorFactory.hpp>
 #include <covins/comm_messages/MsgImage.hpp>    // For handling incoming image messages
 #include <covins/comm_messages/MsgOdometry.hpp> // For handling incoming odometry messages
 #include <covins/comm_messages/MsgKeyframe.hpp> // For handling outgoing keyframe messages
+#include <covins/covins_base/config_comm.hpp> // For covins_params
 
 namespace covins {
 
-// Define a default pair if it's not globally available from TypeDefs
-const std::pair<int,int> defpair = {-1,-1};
-const char* COUTERROR = "[ERROR]"; // Simple error tag for cout
+// Define defpair here as a constant, to avoid macro redefinition issues from typedefs_base.hpp
+// If KFRANGE and MAPRANGE are defined elsewhere, you might need to adjust this.
+// For now, based on your previous usage, a simple -1, -1 pair.
+// Note: If KFRANGE and MAPRANGE are actually defined as constants somewhere, you'd use them.
+// If this is a placeholder, -1,-1 is fine.
+const std::pair<int, int> defpair = {-1, -1};
+
+// COUTERROR, COUTWARN, COUTINFO are now stream macros from typedefs_base.hpp
+// NO LONGER NEED: const char* COUTERROR = "[ERROR]";
 
 FrontendWrapper::FrontendWrapper() {
   // Constructor: Initialize parameters, but defer communication setup to run()
@@ -23,19 +33,18 @@ FrontendWrapper::FrontendWrapper() {
 
 auto FrontendWrapper::run()-> void {
 
-  std::cout << "\nRun Wrapper ....." << std::endl;
+  COUTINFO << "Run Wrapper ....." << std::endl;
 
   std::string config_file;
-  // NOTE: Still using ros::param for config_file, as it's common for ROS nodes.
-  // If you completely remove ROS, this would need to be replaced with a different config loading mechanism.
+  // Use ros::param::get directly.
   if (!ros::param::get("~config_file", config_file)) {
-      std::cerr << COUTERROR << " Failed to get config_file parameter." << std::endl;
+      COUTERROR << " Failed to get config_file parameter." << std::endl;
       return;
   }
 
   cv::FileStorage fSettings(config_file, cv::FileStorage::READ);
   if (!fSettings.isOpened()) {
-      std::cerr << COUTERROR << " Failed to open config file: " << config_file << std::endl;
+      COUTERROR << " Failed to open config file: " << config_file << std::endl;
       return;
   }
 
@@ -43,14 +52,14 @@ auto FrontendWrapper::run()-> void {
   bool b_parse_cam = ParseCamParamFile(fSettings);
   if(!b_parse_cam)
   {
-      std::cerr << COUTERROR << "Error with the camera parameters in the config file" << std::endl;
+      COUTERROR << "Error with the camera parameters in the config file" << std::endl;
       return;
   }
 
   bool b_parse_orb = ParseORBParamFile(fSettings);
   if(!b_parse_orb)
   {
-      std::cerr << COUTERROR << "Error with the ORB parameters in the config file" << std::endl;
+      COUTERROR << "Error with the ORB parameters in the config file" << std::endl;
       return;
   }
 
@@ -59,27 +68,27 @@ auto FrontendWrapper::run()-> void {
   if(!node.empty() && node.isReal())
   {
       sync_tolerance_ = node.real();
-      std::cout << "Synchronization tolerance set to: " << sync_tolerance_ << " seconds" << std::endl;
+      COUTINFO << "Synchronization tolerance set to: " << sync_tolerance_ << " seconds" << std::endl;
   }
   else
   {
       sync_tolerance_ = 0.05; // Default tolerance if not specified
-      std::cout << "WARNING: sync_tolerance not found in config. Using default: " << sync_tolerance_ << " seconds" << std::endl;
+      COUTWARN << "sync_tolerance not found in config. Using default: " << sync_tolerance_ << " seconds" << std::endl;
   }
 
 
   // NEW COVINS Comm Integration using Abstraction Layer
-  covins_params::ShowParamsComm();
+  covins_params::ShowParamsComm(); // Use the static method from the namespace
 
   std::string protocol_type = covins_params::GetCommProtocolType();
   std::string serialization_format = covins_params::GetCommSerializationFormat();
   std::string comm_address = covins_params::GetServerIP();
-  int comm_port = covins_params::GetPort();
+  int comm_port = covins_params::GetPort(); // Now returns int directly
 
   comm_ = CommunicatorFactory::createCommunicator(protocol_type, serialization_format, comm_address, comm_port);
 
   if (!comm_) {
-      std::cerr << COUTERROR << " Failed to create communication interface! Protocol: " << protocol_type << std::endl;
+      COUTERROR << " Failed to create communication interface! Protocol: " << protocol_type << std::endl;
       return;
   }
 
@@ -90,24 +99,16 @@ auto FrontendWrapper::run()-> void {
 
   // Connect the communicator
   if (!comm_->connect(comm_address, comm_port)) {
-      std::cerr << COUTERROR << " Failed to connect communication interface!" << std::endl;
+      COUTERROR << " Failed to connect communication interface!" << std::endl;
       return;
   }
 
   // Get ID from back-end (This part of logic needs to be correctly implemented
   // in the ICommunicator or a higher-level handshake process to actually
   // retrieve the client ID. For now, it's a placeholder.)
-  // The ICommunicator interface does not currently expose GetClientId().
-  // This will likely be handled by a specific message type received from the backend,
-  // or the client ID is passed as a command line argument/config.
-  // Assuming a temporary placeholder value or that it's set via other means.
-  // For demonstration, commenting out the blocking while loop and assigning a default
-  // client_id_ to allow the program to proceed.
-  // while(comm_->GetClientId() < 0){ usleep(1000); }
-  // client_id_ = comm_->GetClientId();
   client_id_ = 0; // TEMPORARY: Assign a default client ID for now.
                    // Proper client ID assignment needs a backend message.
-  std::cout << "Set client ID (temporary): " << client_id_ << std::endl;
+  COUTINFO << "Set client ID (temporary): " << client_id_ << std::endl;
   // ------------------
 
   // Remaining initializations
@@ -128,7 +129,7 @@ auto FrontendWrapper::run()-> void {
   while (comm_->isConnected()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep to reduce CPU usage
   }
-  std::cout << "FrontendWrapper exiting main loop." << std::endl;
+  COUTINFO << "FrontendWrapper exiting main loop." << std::endl;
 }
 
 /**
@@ -151,9 +152,11 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
   msg.id.second = client_id;
   msg.timestamp = ts;
 
+  // Assign directly to msg.calibration members.
+  // These are members of `msg.calibration` which is of type `VI_Calibration`.
   msg.calibration.T_SC = Tsc_;
-  msg.calibration.cam_model = covins::eCamModel::PINHOLE;
-  msg.calibration.dist_model = covins::eDistortionModel::RADTAN;
+  msg.calibration.cam_model = covins::eCamModel::PINHOLE; // Use covins::eCamModel
+  msg.calibration.dist_model = covins::eDistortionModel::RADTAN; // Use covins::eDistortionModel
 
   covins::TypeDefs::precision_t fx = K_.at<float>(0,0);
   covins::TypeDefs::precision_t fy = K_.at<float>(1,1);
@@ -163,14 +166,17 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
   covins::TypeDefs::precision_t k2 = DistCoef_.at<float>(1);
   covins::TypeDefs::precision_t p1 = DistCoef_.at<float>(2);
   covins::TypeDefs::precision_t p2 = DistCoef_.at<float>(3);
-  covins::TypeDefs::DynamicVectorType dist_coeffs;
 
-  dist_coeffs.resize(4);
-  dist_coeffs << k1, k2, p1, p2;
-
+  // Use TypeDefs::DynamicVectorType as defined in typedefs_base.hpp
+  covins::TypeDefs::DynamicVectorType dist_coeffs_vec;
+  dist_coeffs_vec.resize(4); // Or DistCoef_.rows if it can vary
+  dist_coeffs_vec << k1, k2, p1, p2;
 
   if (is_fisheye_) {
-    dist_coeffs << 0.0,0.0,0.0,0.0;
+    // For fisheye, the dist_coeffs_vec needs to be appropriate for fisheye model (often 4 or 5 coeffs)
+    // Here we reset it to zeros if that's the intended behavior for the message, but it should
+    // ideally reflect the actual fisheye distortion coefficients.
+    dist_coeffs_vec.setZero(4); // Assuming 4 coeffs for fisheye if resetting to zero.
     cv::Size size = {img.cols, img.rows};
     cv::Mat E = cv::Mat::eye(3, 3, cv::DataType<double>::type);
 
@@ -178,25 +184,26 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
     cv::Mat map2;
     cv::fisheye::initUndistortRectifyMap(K_, DistCoef_, E, K_, size, CV_16SC2, map1, map2);
 
-    cv::Mat undistort;
-    cv::remap(img, undistort, map1, map2, CV_INTER_LINEAR,
-            CV_HAL_BORDER_CONSTANT);
+    cv::Mat undistort_img; // Use a distinct name to avoid overwriting 'img' prematurely
+    cv::remap(img, undistort_img, map1, map2, cv::INTER_LINEAR,
+            cv::BORDER_CONSTANT);
 
-    img = undistort;
-
-    cv::imshow("undist", undistort);
-    cv::waitKey(5);
+    img = undistort_img; // Assign undistorted image back to img
  }
 
+  // Assign the full VI_Calibration struct to msg.calibration
+  // Pass dist_coeffs_vec, not DistCoef_ (which is cv::Mat)
+  msg.calibration = covins::VI_Calibration(
+      Tsc_,
+      msg.calibration.cam_model, // Use the model already set above
+      msg.calibration.dist_model, // Use the distortion model already set above
+      dist_coeffs_vec, // Use the Eigen vector for distortion coefficients
+      (double)img.cols, (double)img.rows, // Ensure img dimensions are doubles
+      fx, fy, cx, cy,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.81, // Default IMU noise/bias, gravity values
+      Eigen::Vector3d::Zero(), 0.0, 0.0, 0.0 // Default time offset, min/max preint time
+  );
 
-
-  covins::VICalibration calib(
-      Tsc_, msg.calibration.cam_model, msg.calibration.dist_model,
-      dist_coeffs, img.cols, img.rows, fx, fy, cx,
-      cy, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.81,
-      Eigen::Vector3d::Zero(), 0, 0.0, 0.0);
-
-  msg.calibration = calib;
   msg.img_dim_x_min = 0.0;
   msg.img_dim_y_min = 0.0;
   msg.img_dim_x_max = img.cols;
@@ -205,12 +212,16 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
   msg.keypoints_aors.reserve(n_feat_pr_);
   msg.keypoints_distorted.reserve(n_feat_pr_);
   msg.keypoints_undistorted.reserve(n_feat_pr_);
-  msg.descriptors.reserve(n_feat_pr_);
+  // Ensure descriptors are cleared before reserving to avoid issues with previous data if not needed
+  // msg.descriptors.release(); // cv::Mat manages its own memory, but useful to clear if not explicitly handled.
+  // msg.descriptors.reserve(n_feat_pr_); // cv::Mat does not have reserve like std::vector
 
   msg.keypoints_aors_add.reserve(n_feat_);
   msg.keypoints_distorted_add.reserve(n_feat_);
   msg.keypoints_undistorted_add.reserve(n_feat_);
-  msg.descriptors_add.reserve(n_feat_);
+  // msg.descriptors_add.release();
+  // msg.descriptors_add.reserve(n_feat_);
+
 
   //Place Recognition Features
   std::vector<cv::KeyPoint> cv_keypoints;
@@ -245,7 +256,7 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
     sift_detector_->detectAndCompute(img, cv::Mat(), cv_keypoints_add,
                                      new_descriptors_add);
   } else {
-    std::cerr << COUTERROR << " Feature Type Not Supported: Select ORB or SIFT" << std::endl;
+    COUTERROR << " Feature Type Not Supported: Select ORB or SIFT" << std::endl;
     exit(-1);
   }
 
@@ -280,15 +291,20 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
 
   msg.T_sref_s = T_w_sref.inverse() * T_w_s;
 
+  // Assuming KFRANGE and MAPRANGE are defined elsewhere as integer constants
+  // For now, using default pair values.
+  int KFRANGE_VAL = -1; // Placeholder if not defined as macro/const
+  int MAPRANGE_VAL = -1; // Placeholder if not defined as macro/const
+
   if (index == 0)
-    msg.id_predecessor = defpair;
+    msg.id_predecessor = std::make_pair(KFRANGE_VAL, MAPRANGE_VAL); // Use std::make_pair
   else {
     msg.id_predecessor.first = index-1;
     msg.id_predecessor.second = client_id;
     msg.id_reference.first = index-1;
     msg.id_reference.second = client_id;
   }
-  msg.id_successor = defpair;
+  msg.id_successor = std::make_pair(KFRANGE_VAL, MAPRANGE_VAL); // Use std::make_pair
 }
 
 
@@ -305,7 +321,7 @@ void FrontendWrapper::convertToMsg(covins::MsgKeyframe &msg, cv::Mat &img,
  */
 auto FrontendWrapper::genericMessageCallback(std::unique_ptr<IMessage> received_message) -> void {
   if (!received_message) {
-      std::cerr << COUTERROR << " Received null message in genericMessageCallback." << std::endl;
+      COUTERROR << " Received null message in genericMessageCallback." << std::endl;
       return;
   }
 
@@ -319,7 +335,7 @@ auto FrontendWrapper::genericMessageCallback(std::unique_ptr<IMessage> received_
       // Assuming MsgOdometry is correctly derived from IMessage
       odom_buffer_.push_back(std::unique_ptr<MsgOdometry>(static_cast<MsgOdometry*>(received_message.release())));
   } else {
-      std::cerr << COUTERROR << " Unexpected message type received: " << received_message->getType() << std::endl;
+      COUTERROR << " Unexpected message type received: " << received_message->getType() << std::endl;
       return;
   }
 
@@ -354,7 +370,7 @@ auto FrontendWrapper::processSynchronizedMessages() -> void {
 
             // Check if image is valid before processing
             if (img.empty()) {
-                std::cerr << COUTERROR << " Received empty image in synchronized processing. Discarding pair." << std::endl;
+                COUTERROR << " Received empty image in synchronized processing. Discarding pair." << std::endl;
                 image_buffer_.pop_front(); // Discard problematic image
                 odom_buffer_.pop_front();  // Discard corresponding odometry
                 continue; // Try next pair
@@ -370,16 +386,17 @@ auto FrontendWrapper::processSynchronizedMessages() -> void {
             TransformType T_wc = T_wc_eigen;
             TransformType T_wc_prev = Twc_prev_;
 
+            // Use curr_ts_ (member variable) instead of undeclared curr_ts
             if (trans_diff > t_min_ || quat_ang > r_min_) {
-                std::cout << "Generated New KF with id: " << kf_count_<< std::endl;
+                COUTINFO << "Generated New KF with id: " << kf_count_<< std::endl;
                 MsgKeyframe msg_kf;
-                this->convertToMsg(msg_kf, img, T_wc, T_wc_prev, client_id_, kf_count_, curr_ts);
+                this->convertToMsg(msg_kf, img, T_wc, T_wc_prev, client_id_, kf_count_, curr_ts_); // FIX: Use curr_ts_
 
                 // Send MsgKeyframe via the abstract communicator
                 if (comm_ && comm_->isConnected()) {
                     comm_->send(msg_kf);
                 } else {
-                    std::cerr << COUTERROR << " Communicator not connected, cannot send keyframe." << std::endl;
+                    COUTERROR << " Communicator not connected, cannot send keyframe." << std::endl;
                 }
 
                 prev_quat_ = curr_quat_;
@@ -396,11 +413,11 @@ auto FrontendWrapper::processSynchronizedMessages() -> void {
 
         } else if (img_ts < odom_ts - sync_tolerance_) {
             // Image is too old, discard it as it's too far before the current odometry
-            std::cout << "Discarding old image (TS: " << img_ts << ") as it's too far before odometry (TS: " << odom_ts << ")" << std::endl;
+            COUTINFO << "Discarding old image (TS: " << img_ts << ") as it's too far before odometry (TS: " << odom_ts << ")" << std::endl;
             image_buffer_.pop_front();
         } else if (odom_ts < img_ts - sync_tolerance_) {
             // Odometry is too old, discard it as it's too far before the current image
-            std::cout << "Discarding old odometry (TS: " << odom_ts << ") as it's too far before image (TS: " << img_ts << ")" << std::endl;
+            COUTINFO << "Discarding old odometry (TS: " << odom_ts << ") as it's too far before image (TS: " << img_ts << ")" << std::endl;
             odom_buffer_.pop_front();
         } else {
             // No synchronized pair found at the front of buffers, and neither is significantly too old.
@@ -410,22 +427,13 @@ auto FrontendWrapper::processSynchronizedMessages() -> void {
     }
 }
 
-void FrontendWrapper::sendKeyframeMessage(const MsgKeyframe& message) {
-    if (comm_ && comm_->isConnected()) {
-        if (!comm_->send(message)) {
-            std::cerr << COUTERROR << " Failed to send MsgKeyframe!" << std::endl;
-        }
-    } else {
-        std::cerr << COUTERROR << " Communicator not connected, cannot send MsgKeyframe." << std::endl;
-    }
-}
 
 // ParseCamParamFile and ParseORBParamFile remain largely unchanged,
 // but any ROS_INFO/ERROR calls inside them should be updated to std::cout/cerr.
 bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
 {
     DistCoef_ = cv::Mat::zeros(4,1,CV_32F);
-    std::cout << std::endl << "Camera Parameters: " << std::endl;
+    COUTINFO << std::endl << "Camera Parameters: " << std::endl;
     bool b_miss_params = false;
 
     is_odom_imu_frame_ = int(fSettings["odom_in_imu_frame"]);
@@ -461,7 +469,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.fx parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.fx parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -472,7 +480,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.fy parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.fy parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -483,7 +491,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.cx parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.cx parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -494,7 +502,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.cy parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.cy parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -506,7 +514,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.k1 parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.k1 parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -517,7 +525,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.k2 parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.k2 parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -528,7 +536,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.p1 parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.p1 parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -539,7 +547,7 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         }
         else
         {
-            std::cerr << COUTERROR << "*Camera.p2 parameter doesn't exist or is not a real number*" << std::endl;
+            COUTERROR << "*Camera.p2 parameter doesn't exist or is not a real number*" << std::endl;
             b_miss_params = true;
         }
 
@@ -555,19 +563,19 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
             return false;
         }
 
-        std::cout << "- Camera: Pinhole" << std::endl;
-        std::cout << "- fx: " << fx << std::endl;
-        std::cout << "- fy: " << fy << std::endl;
-        std::cout << "- cx: " << cx << std::endl;
-        std::cout << "- cy: " << cy << std::endl;
-        std::cout << "- k1: " << DistCoef_.at<float>(0) << std::endl;
-        std::cout << "- k2: " << DistCoef_.at<float>(1) << std::endl;
+        COUTINFO << "- Camera: Pinhole" << std::endl;
+        COUTINFO << "- fx: " << fx << std::endl;
+        COUTINFO << "- fy: " << fy << std::endl;
+        COUTINFO << "- cx: " << cx << std::endl;
+        COUTINFO << "- cy: " << cy << std::endl;
+        COUTINFO << "- k1: " << DistCoef_.at<float>(0) << std::endl;
+        COUTINFO << "- k2: " << DistCoef_.at<float>(1) << std::endl;
 
-        std::cout << "- p1: " << DistCoef_.at<float>(2) << std::endl;
-        std::cout << "- p2: " << DistCoef_.at<float>(3) << std::endl;
+        COUTINFO << "- p1: " << DistCoef_.at<float>(2) << std::endl;
+        COUTINFO << "- p2: " << DistCoef_.at<float>(3) << std::endl;
 
         if(DistCoef_.rows==5)
-            std::cout << "- k3: " << DistCoef_.at<float>(4) << std::endl;
+            COUTINFO << "- k3: " << DistCoef_.at<float>(4) << std::endl;
 
         K_ = cv::Mat::eye(3,3,CV_32F);
         K_.at<float>(0,0) = fx;
@@ -578,8 +586,8 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
 
     else
     {
-        std::cerr << COUTERROR << "*Not Supported Camera Sensor*" << std::endl;
-        std::cerr << "Check an example configuration file with the desired sensor" << std::endl;
+        COUTERROR << "*Not Supported Camera Sensor*" << std::endl;
+        COUTERROR << "Check an example configuration file with the desired sensor" << std::endl;
     }
 
     if(b_miss_params)
@@ -596,18 +604,18 @@ bool FrontendWrapper::ParseCamParamFile(cv::FileStorage &fSettings)
         Tbc = node.mat();
         if(Tbc.rows != 4 || Tbc.cols != 4)
         {
-            std::cerr << COUTERROR << "*Tbc matrix have to be a 4x4 transformation matrix*" << std::endl;
+            COUTERROR << "*Tbc matrix have to be a 4x4 transformation matrix*" << std::endl;
             b_miss_params = true;
         }
     }
     else
     {
-        std::cerr << COUTERROR << "*Tbc matrix doesn't exist*" << std::endl;
+        COUTERROR << "*Tbc matrix doesn't exist*" << std::endl;
         b_miss_params = true;
     }
 
-    std::cout << std::endl;
-    std::cout << "Left camera to Imu Transform (Tbc): " << std::endl << Tbc << std::endl;
+    COUTINFO << std::endl;
+    COUTINFO << "Left camera to Imu Transform (Tbc): " << std::endl << Tbc << std::endl;
 
     cv::cv2eigen(Tbc, Tsc_);
     // Initialize with Tsc_ but these will be updated by the first incoming odometry message
@@ -632,7 +640,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*extractor.type parameter doesn't exist or is not a string*" << std::endl;
+        COUTERROR << "*extractor.type parameter doesn't exist or is not a string*" << std::endl;
         b_miss_params = true;
     }
 
@@ -643,7 +651,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*extractor.nFeatures parameter doesn't exist or is not an integer*" << std::endl;
+        COUTERROR << "*extractor.nFeatures parameter doesn't exist or is not an integer*" << std::endl;
         b_miss_params = true;
     }
 
@@ -654,7 +662,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*ORBextractor.nFeaturesPR parameter doesn't exist or is not an integer*" << std::endl;
+        COUTERROR << "*ORBextractor.nFeaturesPR parameter doesn't exist or is not an integer*" << std::endl;
         b_miss_params = true;
     }
 
@@ -665,7 +673,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*ORBextractor.scaleFactor parameter doesn't exist or is not a real number*" << std::endl;
+        COUTERROR << "*ORBextractor.scaleFactor parameter doesn't exist or is not a real number*" << std::endl;
         b_miss_params = true;
     }
 
@@ -676,7 +684,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*ORBextractor.nLevels parameter doesn't exist or is not an integer*" << std::endl;
+        COUTERROR << "*ORBextractor.nLevels parameter doesn't exist or is not an integer*" << std::endl;
         b_miss_params = true;
     }
 
@@ -687,7 +695,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*ORBextractor.iniThFAST parameter doesn't exist or is not an integer*" << std::endl;
+        COUTERROR << "*ORBextractor.iniThFAST parameter doesn't exist or is not an integer*" << std::endl;
         b_miss_params = true;
     }
 
@@ -698,7 +706,7 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     }
     else
     {
-        std::cerr << COUTERROR << "*ORBextractor.minThFAST parameter doesn't exist or is not an integer*" << std::endl;
+        COUTERROR << "*ORBextractor.minThFAST parameter doesn't exist or is not an integer*" << std::endl;
         b_miss_params = true;
     }
 
@@ -715,14 +723,14 @@ bool FrontendWrapper::ParseORBParamFile(cv::FileStorage &fSettings)
     orb_detector_ = cv::ORB::create(nFeatures);
     sift_detector_ = cv::xfeatures2d::SIFT::create(nFeatures);
 
-    std::cout << std::endl << "Extractor Parameters: " << std::endl;
-    std::cout << "Feature Type: " << fType << std::endl;
-    std::cout << "- Number of Features: " << nFeatures << std::endl;
-    std::cout << "- Number of Features Place Rec: " << nFeaturesPR << std::endl;
-    std::cout << "- Scale Levels: " << nLevels << std::endl;
-    std::cout << "- Scale Factor: " << fScaleFactor << std::endl;
-    std::cout << "- Initial Fast Threshold: " << fIniThFAST << std::endl;
-    std::cout << "- Minimum Fast Threshold: " << fMinThFAST << std::endl;
+    COUTINFO << std::endl << "Extractor Parameters: " << std::endl;
+    COUTINFO << "Feature Type: " << fType << std::endl;
+    COUTINFO << "- Number of Features: " << nFeatures << std::endl;
+    COUTINFO << "- Number of Features Place Rec: " << nFeaturesPR << std::endl;
+    COUTINFO << "- Scale Levels: " << nLevels << std::endl;
+    COUTINFO << "- Scale Factor: " << fScaleFactor << std::endl;
+    COUTINFO << "- Initial Fast Threshold: " << fIniThFAST << std::endl;
+    COUTINFO << "- Minimum Fast Threshold: " << fMinThFAST << std::endl;
 
     n_feat_ = nFeatures;
     n_feat_pr_ = nFeaturesPR;

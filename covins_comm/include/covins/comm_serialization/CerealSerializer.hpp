@@ -1,9 +1,3 @@
-//
-// Created by user1 on 08/06/25.
-//
-
-#ifndef CEREALSERIALIZER_HPP
-#define CEREALSERIALIZER_HPP
 #pragma once
 
 #include <string>
@@ -32,7 +26,7 @@
 // For now, we'll serialize element-wise within the write/read methods.
 
 // Include the abstract interfaces
-#include <covins/comm_abstraction/ISerializer.hpp> // This also defines IDeserializer
+#include <covins/comm_serialization/ISerializer.hpp> // This also defines IDeserializer
 
 namespace covins {
 
@@ -64,6 +58,7 @@ public:
     void write(const std::string& key, const std::vector<uint8_t>& data) override;
     void write(const std::string& key, const Eigen::Matrix4d& transform) override;
     void write(const std::string& key, const Eigen::Vector3d& vector) override;
+    void write(const std::string& key, const Eigen::Matrix<double, 9, 9>& matrix) override; // !!! NEW !!!
 
     std::vector<uint8_t> getSerializedData() const override;
     void reset() override;
@@ -78,6 +73,7 @@ public:
     std::vector<uint8_t> readBinary(const std::string& key) override;
     Eigen::Matrix4d readTransform(const std::string& key) override;
     Eigen::Vector3d readVector3d(const std::string& key) override;
+    Eigen::Matrix<double, 9, 9> readMatrix9d(const std::string& key) override; // !!! NEW !!!
 
 private:
     // Internal stringstream to hold the binary data
@@ -104,11 +100,7 @@ private:
     // This is more complex but matches the ISerializer/IDeserializer interface better.
     // Simpler approach for binary: just serialize values in a known order.
     // Given the ISerializer interface requires a 'key', let's stick to using a map structure for now.
-    // A map within the stream might not be the most efficient for pure binary,
-    // but it respects the API.
-
-    // A map to hold serialized data by key before flushing to stream, or for reads
-    // This approach might be less performant for large binary blobs.
+    // A map within the stream might not be less performant for large binary blobs.
     // A more idiomatic Cereal approach would be to define custom save/load functions
     // for each IMessage, passing the archive directly, rather than through
     // generic write/read methods with keys.
@@ -120,5 +112,3 @@ private:
 };
 
 } // namespace covins
-
-#endif //CEREALSERIALIZER_HPP

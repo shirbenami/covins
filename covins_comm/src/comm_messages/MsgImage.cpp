@@ -7,11 +7,12 @@
 
 namespace covins {
 
-MsgImage::MsgImage()
-    : timestamp(0.0)
-{
-    image = cv::Mat(); // Default initialize empty cv::Mat
-}
+// Constructor definition removed as it's defined in the header.
+// MsgImage::MsgImage()
+//     : timestamp(0.0)
+// {
+//     image = cv::Mat(); // Default initialize empty cv::Mat
+// }
 
 std::unique_ptr<IMessage> MsgImage::clone() const {
     auto cloned_msg = std::make_unique<MsgImage>();

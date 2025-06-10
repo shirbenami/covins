@@ -70,7 +70,7 @@ include_directories(
         ${covins_comm_INCLUDE_DIRS}
         ${covins_frontend_INCLUDE_DIRS}
         # Add the directory containing frontend_wrapper.hpp
-        #${PROJECT_SOURCE_DIR}/../covins_frontend/src
+        ${PROJECT_SOURCE_DIR}/../covins_frontend/src
         # REMOVED: Old include path for ORB_SLAM3's internal communicator
         # ${PROJECT_SOURCE_DIR}/include/comm
         ${PROJECT_SOURCE_DIR}/Thirdparty/

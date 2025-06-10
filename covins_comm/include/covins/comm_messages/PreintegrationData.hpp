@@ -1,47 +1,46 @@
-//
-// Created by user1 on 09/06/25.
-//
-
-#ifndef PREINTEGRATIONDATA_HPP
-#define PREINTEGRATIONDATA_HPP
 #pragma once
 
 #include <string>
-#include <vector>
-#include <memory>   // For std::unique_ptr
-
-// Eigen includes for matrices and vectors
+#include <memory>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
-// Abstract message interface and serialization interfaces
 #include <covins/comm_abstraction/IMessage.hpp>
-#include <covins/comm_abstraction/ISerializer.hpp> // IDeserializer is in the same header
+#include <covins/comm_serialization/ISerializer.hpp> // For ISerializer and IDeserializer
+#include <covins/covins_base/typedefs_base.hpp> // For TypeDefs
 
 namespace covins {
 
 /**
- * @brief Concrete implementation of IMessage for preintegrated IMU data.
- *
- * This message type encapsulates the change in pose, velocity, and biases
- * over a time interval, as typically computed by IMU preintegration.
- * It handles its own serialization and deserialization via the
- * ISerializer/IDeserializer interfaces.
+ * @brief Concrete implementation of IMessage for PreintegrationData.
+ * This message typically carries preintegrated IMU measurements.
  */
 class PreintegrationData : public IMessage {
 public:
-    // Public data members for preintegrated IMU measurements
-    Eigen::Matrix4d delta_pose_;         // Change in pose (rotation and translation)
-    Eigen::Vector3d delta_velocity_;     // Change in velocity
-    Eigen::Vector3d delta_bias_acc_;     // Change in accelerometer bias
-    Eigen::Vector3d delta_bias_gyro_;    // Change in gyroscope bias
-    double delta_time_;                  // Total time interval of integration
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    // Public data members related to IMU preintegration
+    double delta_time_;
+    TypeDefs::Vector3Type delta_vel_;
+    TypeDefs::Vector3Type delta_ang_;
+    TypeDefs::Matrix9Type covariance_; // Covariance matrix for preintegration
+    TypeDefs::Vector3Type gyr_bias_;   // Gyroscope bias
+    TypeDefs::Vector3Type acc_bias_;   // Accelerometer bias
 
 public:
     /**
-     * @brief Default constructor. Initializes all members to identity/zero.
+     * @brief Default constructor. Initializes base class with message type.
+     * !!! CRITICAL FIX: Call base class constructor with string argument !!!
      */
-    PreintegrationData();
+    PreintegrationData() : IMessage("PreintegrationData")
+    {
+        delta_time_ = 0.0;
+        delta_vel_.setZero();
+        delta_ang_.setZero();
+        covariance_.setIdentity(); // Initialize to identity or zeros as appropriate
+        gyr_bias_.setZero();
+        acc_bias_.setZero();
+    }
 
     /**
      * @brief Destructor.
@@ -54,7 +53,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "PreintegrationData"
      */
-    std::string getType() const override { return "PreintegrationData"; }
+    std::string getType() const override { return message_type_; }
 
     /**
      * @brief Creates a deep copy of this PreintegrationData object.
@@ -76,5 +75,3 @@ public:
 };
 
 } // namespace covins
-
-#endif //PREINTEGRATIONDATA_HPP
