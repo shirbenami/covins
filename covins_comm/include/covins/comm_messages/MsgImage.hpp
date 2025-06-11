@@ -30,7 +30,7 @@ public:
     /**
      * @brief Default constructor. Initializes base class with message type.
      */
-    MsgImage() : IMessage("Image") {}
+    MsgImage() : IMessage("Image") {} // Call base class constructor
 
     /**
      * @brief Destructor.
@@ -43,7 +43,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Image"
      */
-    std::string getType() const override { return message_type_; } // Now uses base class implementation
+    std::string getType() const override { return message_type_; }
 
     /**
      * @brief Creates a deep copy of this MsgImage object.
@@ -64,8 +64,8 @@ public:
     void deserialize(IDeserializer& deserializer) override;
 
     // Utility methods
-    void setImage(const cv::Mat& img);
-    const cv::Mat& getImage() const;
+    void setImage(const cv::Mat& img); // Ensure these are declared if defined in .cpp
+    const cv::Mat& getImage() const;    // Ensure these are declared if defined in .cpp
     void setTimestamp(double ts) { timestamp = ts; }
     double getTimestamp() const { return timestamp; }
 };

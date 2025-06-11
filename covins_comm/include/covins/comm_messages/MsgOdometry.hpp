@@ -31,7 +31,7 @@ public:
     /**
      * @brief Default constructor. Initializes base class with message type.
      */
-    MsgOdometry() : IMessage("Odometry") {}
+    MsgOdometry() : IMessage("Odometry") {} // Call base class constructor
 
     /**
      * @brief Destructor.
@@ -44,7 +44,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Odometry"
      */
-    std::string getType() const override { return message_type_; } // Now uses base class implementation
+    std::string getType() const override { return message_type_; }
 
     /**
      * @brief Creates a deep copy of this MsgOdometry object.
@@ -65,8 +65,8 @@ public:
     void deserialize(IDeserializer& deserializer) override;
 
     // Utility methods
-    void setTransform(const Eigen::Matrix4d& t) { transform = t; }
-    const Eigen::Matrix4d& getTransform() const { return transform; }
+    void setTransform(const Eigen::Matrix4d& t); // Ensure declared if defined in .cpp
+    const Eigen::Matrix4d& getTransform() const; // Ensure declared if defined in .cpp
     void setTimestamp(double ts) { timestamp = ts; }
     double getTimestamp() const { return timestamp; }
 };

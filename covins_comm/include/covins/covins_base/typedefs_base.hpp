@@ -58,7 +58,7 @@ public:
     using Matrix6Type = Eigen::Matrix<precision_t, 6, 6>;
     using MatrixXType = Eigen::Matrix<precision_t, Eigen::Dynamic, Eigen::Dynamic>;
 
-    // !!! FIX: Added Matrix9Type definition !!!
+    // FIX: Added Matrix9Type definition
     using Matrix9Type = Eigen::Matrix<precision_t, 9, 9>;
 
     // Add DynamicVectorType explicitly for clarity and usage

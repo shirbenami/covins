@@ -1,45 +1,49 @@
 %YAML:1.0
 
-# Example for a phone camera, you must fill in your values!
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
 Camera.type: "PinHole"
-Camera.fx: 520.9
-Camera.fy: 521.0
-Camera.cx: 325.1
-Camera.cy: 249.7
 
-Camera.k1: -0.326
-Camera.k2: 0.105
-Camera.p1: -0.0005
-Camera.p2: 0.0003
+# Camera calibration and distortion parameters (OpenCV) 
+# These parameters are for the image resolution used during calibration (e.g., 640x360)
+Camera.fx: 333.68589965
+Camera.fy: 440.07753776
+Camera.cx: 181.31761337
+Camera.cy: 331.57602364
 
+Camera.k1: 0.934600006      # 9.34600006e-01
+Camera.k2: -8.58697038      # -8.58697038e+00
+Camera.p1: 0.00133697456    # 1.33697456e-03
+Camera.p2: -0.0218050015    # -2.18050015e-02
+Camera.k3: 31.1607776       # 3.11607776e+01 (this is the 5th distortion coefficient)
 
-# Camera resolution
+# Camera resolution - Set this to the resolution you calibrated for (640x360)
 Camera.width: 640
-Camera.height: 480
+Camera.height: 360
 
 # Camera frames per second 
-Camera.fps: 20.0
+Camera.fps: 20.0 # Keep or adjust if you know your camera's actual FPS
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
-Camera.RGB: 1
+Camera.RGB: 1 # Adjust if your images are BGR or grayscale
 
-# IMU-to-camera (identity as placeholder)
+# Transformation from camera to body-frame (imu)
 Tbc: !!opencv-matrix
-   rows: 4
-   cols: 4
-   dt: d
-   data: [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+    rows: 4
+    cols: 4
+    dt: f
+    data: [0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
+          0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
+         -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
+          0.0, 0.0, 0.0, 1.0]
 
-# IMU noise (example values)
-IMU.NoiseGyro: 1.7e-4
-IMU.NoiseAcc: 2.0e-3
-IMU.GyroWalk: 1.9393e-05
-IMU.AccWalk: 3.0e-03
+# IMU noise
+IMU.NoiseGyro: 1.7e-4 #1.6968e-04 
+IMU.NoiseAcc: 2.0000e-3 #2.0e-3
+IMU.GyroWalk: 1.9393e-05 
+IMU.AccWalk: 3.0000e-03 # 3e-03
 IMU.Frequency: 200
-
-
-
-
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
@@ -48,16 +52,16 @@ IMU.Frequency: 200
 # ORB Extractor: Number of features per image
 ORBextractor.nFeatures: 1000 # 1000
 
-# ORB Extractor: Scale factor between levels in the scale pyramid 	
+# ORB Extractor: Scale factor between levels in the scale pyramid  
 ORBextractor.scaleFactor: 1.2
 
-# ORB Extractor: Number of levels in the scale pyramid	
+# ORB Extractor: Number of levels in the scale pyramid  
 ORBextractor.nLevels: 8
 
 # ORB Extractor: Fast threshold
 # Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
 # Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
-# You can lower these values if your images have low contrast			
+# You can lower these values if your images have low contrast      
 ORBextractor.iniThFAST: 20
 ORBextractor.minThFAST: 7
 

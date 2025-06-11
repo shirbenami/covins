@@ -45,7 +45,7 @@ public:
     /**
      * @brief Default constructor. Initializes base class with message type.
      */
-    MsgLandmark() : IMessage("Landmark") {}
+    MsgLandmark() : IMessage("Landmark") {} // Call base class constructor
 
     /**
      * @brief Destructor.
@@ -58,7 +58,7 @@ public:
      * @brief Returns the type identifier for this message.
      * @return "Landmark"
      */
-    std::string getType() const override { return message_type_; } // Now uses base class implementation
+    std::string getType() const override { return message_type_; }
 
     /**
      * @brief Creates a deep copy of this MsgLandmark object.

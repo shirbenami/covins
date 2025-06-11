@@ -123,7 +123,7 @@ struct VI_Calibration {
         acc_noise_density(acc_noise_density_), acc_random_walk(acc_random_walk_),
         gyr_bias_noise_density(gyr_bias_noise_density_), acc_bias_noise_density(acc_bias_noise_density_),
         imu_freq(imu_freq_), gravity(gravity_), gravity_vec(gravity_vec_),
-        time_offset_imu_cam(time_offset_imu_cam_), min_imu_preint_time(min_imu_preint_time_), max_imu_preint_time(max_imu_preint_time_)
+        time_offset_imu_cam(time_offset_imu_cam_), min_imu_preint_time(min_imu_preint_time_), max_imu_preint_time_(max_imu_preint_time_)
     {}
 };
 
@@ -196,6 +196,10 @@ public:
     std::unique_ptr<IMessage> clone() const override;
     void serialize(ISerializer& serializer) const override;
     void deserialize(IDeserializer& deserializer) override;
+
+    // Utility methods for image access
+    void setImage(const cv::Mat& img); // FIX: Added declaration
+    const cv::Mat& getImage() const;    // FIX: Added declaration
 };
 
 } // namespace covins

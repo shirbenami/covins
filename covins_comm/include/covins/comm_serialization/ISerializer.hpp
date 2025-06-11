@@ -39,7 +39,7 @@ public:
      * @param key A key or identifier for the data.
      * @param value The double to write.
      */
-    virtual void write(const std::string& key, double value) = 0; // FIX: Removed duplicate 'void'
+    virtual void write(const std::string& key, double value) = 0; // FIXED: Removed duplicate 'void'
 
     /**
      * @brief Writes a boolean value to the serializer.
@@ -72,7 +72,7 @@ public:
     /**
      * @brief Writes an Eigen 9x9 matrix (e.g., for covariance) to the serializer.
      * @param key A key or identifier for the data.
-     * @param matrix The Eigen::Matrix<double, 9, 9> to write.
+     * @param matrix The Eigen::Matrix<double, 9, 9>& to write.
      */
     virtual void write(const std::string& key, const Eigen::Matrix<double, 9, 9>& matrix) = 0;
 
