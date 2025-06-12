@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+<param name="use_sim_time" value="true"/>
+
+<arg name="ag_n" default="0" />
+<arg name="voc" default="/root/covins_ws/src/covins/orb_slam3/Vocabulary/ORBvoc.txt" />
+<arg name="cam" default="/root/covins_ws/src/covins/orb_slam3/Examples/real_camera_hector.yaml" />
+
+<node pkg="ORB_SLAM3" type="Mono_Inertial" name="ORB_SLAM3_monoi$(arg ag_n)" args="$(arg voc) $(arg cam)" output="screen">
+
+    <remap from="/camera/image_raw" to="/uav0/front_cam/camera/image"/>
+    <remap from="/imu" to="/uav0/raw_imu"/>
+
+</node>
+
+</launch>
+
