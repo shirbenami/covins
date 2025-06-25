@@ -11,7 +11,7 @@ WORKDIR $CATKIN_WS
 # Copy your ENTIRE covins application source code.
 # This includes covins_comm, covins_frontend, covins_backend, and your ORB_SLAM3 fork/ROS wrapper.
 # This layer will be invalidated every time you change a file in your local src/covins/.
-COPY ./ $CATKIN_WS/src/covins/
+COPY covins/ $CATKIN_WS/src/covins/
 
 # Source devel space to ensure environment is set up for subsequent builds
 RUN /bin/bash -c ". devel/setup.bash"
